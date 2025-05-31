@@ -178,7 +178,7 @@ static bool Lesson9_Init(NeHeContext* ctx)
 	instanceXferBuffer = SDL_CreateGPUTransferBuffer(ctx->device, &(const SDL_GPUTransferBufferCreateInfo)
 	{
 		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-		.size = sizeof(Instance) * numStars
+		.size = sizeof(Instance) * 2 * numStars
 	});
 	if (!instanceXferBuffer)
 	{
