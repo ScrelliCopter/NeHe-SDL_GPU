@@ -26,6 +26,9 @@ typedef struct
 	unsigned fragmentSamplers;
 } NeHeShaderProgramCreateInfo;
 
+int NeHe_Random(void);
+void NeHe_RandomSeed(uint32_t seed);
+
 bool NeHe_InitGPU(NeHeContext* ctx, const char* title, int width, int height);
 bool NeHe_SetupDepthTexture(NeHeContext* ctx, uint32_t width, uint32_t height,
 	SDL_GPUTextureFormat format, float clearDepth);

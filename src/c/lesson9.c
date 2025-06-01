@@ -55,18 +55,6 @@ static float zoom = -15.0f;
 static float tilt = 90.0f;
 static float spin = 0.0f;
 
-static uint32_t rngState = 1;
-static inline int RngNext(void)
-{
-	//TODO: check which one of these matches win32
-#if 0
-	rngState = rngState * 1103515245 + 12345;
-#else
-	rngState = rngState * 214013 + 2531011;
-#endif
-	return (int)((rngState >> 16) & 0x7FFF);  // (s / 65536) % 32768
-}
-
 
 static bool Lesson9_Init(NeHeContext* ctx)
 {
@@ -192,9 +180,9 @@ static bool Lesson9_Init(NeHeContext* ctx)
 		{
 			.angle = 0.0f,
 			.distance = 5.0f * ((float)i / (float)numStars),
-			.r = (uint8_t)(RngNext() % 256),
-			.g = (uint8_t)(RngNext() % 256),
-			.b = (uint8_t)(RngNext() % 256)
+			.r = (uint8_t)(NeHe_Random() % 256),
+			.g = (uint8_t)(NeHe_Random() % 256),
+			.b = (uint8_t)(NeHe_Random() % 256)
 		};
 	}
 
@@ -270,9 +258,9 @@ static void Lesson9_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restri
 		if (star->distance < 0.0f)
 		{
 			star->distance += 5.0f;
-			star->r = (uint8_t)(RngNext() % 256);
-			star->g = (uint8_t)(RngNext() % 256);
-			star->b = (uint8_t)(RngNext() % 256);
+			star->r = (uint8_t)(NeHe_Random() % 256);
+			star->g = (uint8_t)(NeHe_Random() % 256);
+			star->b = (uint8_t)(NeHe_Random() % 256);
 		}
 	}
 	SDL_UnmapGPUTransferBuffer(ctx->device, instanceXferBuffer);

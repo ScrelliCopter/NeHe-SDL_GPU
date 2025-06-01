@@ -6,6 +6,20 @@
 #include "nehe.h"
 
 
+static uint32_t rngState = 1;
+
+int NeHe_Random(void)
+{
+	rngState = rngState * 214013 + 2531011;
+	return (int)((rngState >> 16) & 0x7FFF);  // (s / 65536) % 32768
+}
+
+void NeHe_RandomSeed(uint32_t seed)
+{
+	rngState = seed;
+}
+
+
 bool NeHe_InitGPU(NeHeContext* ctx, const char* title, int width, int height)
 {
 	// Create window
