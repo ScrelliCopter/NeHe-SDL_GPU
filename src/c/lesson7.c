@@ -50,12 +50,12 @@ static const Vertex vertices[] =
 
 static const uint16_t indices[] =
 {
-     0,  1,  2,   2,  3,  0,  // Front
-     4,  5,  6,   6,  7,  4,  // Back
-     8,  9, 10,  10, 11,  8,  // Top
-    12, 13, 14,  14, 15, 12,  // Bottom
-    16, 17, 18,  18, 19, 16,  // Right
-    20, 21, 22,  22, 23, 20   // Left
+	 0,  1,  2,   2,  3,  0,  // Front
+	 4,  5,  6,   6,  7,  4,  // Back
+	 8,  9, 10,  10, 11,  8,  // Top
+	12, 13, 14,  14, 15, 12,  // Bottom
+	16, 17, 18,  18, 19, 16,  // Right
+	20, 21, 22,  22, 23, 20   // Left
 };
 
 
@@ -191,7 +191,7 @@ static bool Lesson7_Init(NeHeContext* restrict ctx)
 	});
 	SDL_ReleaseGPUShader(ctx->device, fragmentShaderLight);
 	SDL_ReleaseGPUShader(ctx->device, vertexShaderLight);
-	if (!psoUnlit)
+	if (!psoLight)
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateGPUGraphicsPipeline: %s", SDL_GetError());
 		return false;

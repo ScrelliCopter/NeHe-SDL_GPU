@@ -386,7 +386,6 @@ bool NeHe_LoadShaders(NeHeContext* restrict ctx,
 	SDL_GPUShader** restrict outFragment,
 	const char* restrict name,
 	const NeHeShaderProgramCreateInfo* restrict info)
-	//unsigned vertexUniforms, unsigned fragmentSamplers, unsigned vertexStorage)
 {
 	SDL_GPUShader *vtxShader = NULL, *frgShader = NULL;
 

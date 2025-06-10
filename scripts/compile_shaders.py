@@ -110,7 +110,7 @@ def compile_dxil_shaders(shaders: Iterable[Shader], dxc: str | None = None, cwd:
 	for shader in shaders:
 		entry, shader_type = {
 			"vert": ("VertexMain", "vs_6_0"),
-			"frag": ("FragmentMain", "ps_6_0") }[shader.type]
+			"frag": ("PixelMain", "ps_6_0") }[shader.type]
 		cflags = ["-E", entry, "-T", shader_type]
 		subprocess.run([dxc, *cflags, "-Fo", shader.output, shader.source], cwd=cwd, check=True)
 
@@ -124,7 +124,7 @@ def compile_dxbc_shaders(shaders: Iterable[Shader], cwd: Path | None = None) -> 
 	for shader in shaders:
 		entry, shader_type = {
 			"vert": ("VertexMain", "vs_5_1"),
-			"frag": ("FragmentMain", "ps_5_1") }[shader.type]
+			"frag": ("PixelMain", "ps_5_1") }[shader.type]
 		cflags = ["/E", entry, "/T", shader_type]
 		subprocess.run(["fxc", *cflags, "/Fo", shader.output, shader.source], cwd=cwd, check=True)
 
