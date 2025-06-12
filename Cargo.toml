@@ -1,0 +1,38 @@
+[package]
+name = "NeHe-SDL_GPU"
+edition = "2024"
+
+[dependencies]
+sdl3-sys = { version = "0.5.1", features = [ "link-framework" ] }
+
+[lib]
+name = "nehe"
+path = "src/rust/nehe/lib.rs"
+
+[[bin]]
+name = "lesson1"
+path = "src/rust/lesson1.rs"
+
+[[bin]]
+name = "lesson2"
+path = "src/rust/lesson2.rs"
+
+[[bin]]
+name = "lesson3"
+path = "src/rust/lesson3.rs"
+
+[[bin]]
+name = "lesson4"
+path = "src/rust/lesson4.rs"
+
+[[bin]]
+name = "lesson5"
+path = "src/rust/lesson5.rs"
+
+[[bin]]
+name = "lesson6"
+path = "src/rust/lesson6.rs"
+
+[[bin]]
+name = "lesson7"
+path = "src/rust/lesson7.rs"
