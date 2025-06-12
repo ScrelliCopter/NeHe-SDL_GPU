@@ -24,7 +24,13 @@ public struct NeHeCopyPass: ~Copyable
 		// Free transfer buffers
 		for copy in self.copies.reversed()
 		{
-			SDL_ReleaseGPUTransferBuffer(self.device, copy.xferBuffer)
+			switch copy
+			{
+			case .buffer(_, let xferBuffer, _):
+				SDL_ReleaseGPUTransferBuffer(self.device, xferBuffer)
+			case .texture(_, let xferBuffer, _, _):
+				SDL_ReleaseGPUTransferBuffer(self.device, xferBuffer)
+			}
 		}
 	}
 
@@ -39,16 +45,37 @@ public struct NeHeCopyPass: ~Copyable
 		// Begin the copy pass
 		let pass = SDL_BeginGPUCopyPass(cmd)
 
-		// Upload data into the GPU buffer(s)
+		// Upload buffers and textures into the GPU buffer(s)
 		for copy in self.copies
 		{
-			var vtxSource = SDL_GPUTransferBufferLocation(transfer_buffer: copy.xferBuffer, offset: 0)
-			var vtxDestination = SDL_GPUBufferRegion(buffer: copy.buffer, offset: 0, size: copy.size)
-			SDL_UploadToGPUBuffer(pass, &vtxSource, &vtxDestination, false)
+			switch copy
+			{
+			case .buffer(let buffer, let xferBuffer, let size):
+				var source = SDL_GPUTransferBufferLocation(transfer_buffer: xferBuffer, offset: 0)
+				var destination = SDL_GPUBufferRegion(buffer: buffer, offset: 0, size: size)
+				SDL_UploadToGPUBuffer(pass, &source, &destination, false)
+			case .texture(let texture, let xferBuffer, let size, _):
+				var source = SDL_GPUTextureTransferInfo()
+				source.transfer_buffer = xferBuffer
+				source.offset = 0
+				var destination = SDL_GPUTextureRegion()
+				destination.texture = texture
+				destination.w = size.width
+				destination.h = size.height
+				destination.d = 1  // info.layer_count_or_depth
+				SDL_UploadToGPUTexture(pass, &source, &destination, false)
+			}
 		}
 
-		// End & submit the copy pass
+		// End the copy pass
 		SDL_EndGPUCopyPass(pass)
+
+		// Generate mipmaps if needed
+		for case .texture(let texture, _, _, let genMipmaps) in self.copies where genMipmaps
+		{
+			SDL_GenerateMipmapsForGPUTexture(cmd, texture)
+		}
+
 		SDL_SubmitGPUCommandBuffer(cmd)
 	}
 }
@@ -91,7 +118,7 @@ public extension NeHeCopyPass
 		}
 		SDL_UnmapGPUTransferBuffer(self.device, xferBuffer)
 
-		self.copies.append(.init(
+		self.copies.append(.buffer(
 			buffer: buffer,
 			xferBuffer: xferBuffer,
 			size: size))
@@ -199,7 +226,7 @@ public extension NeHeCopyPass
 
 fileprivate extension NeHeCopyPass
 {
-	func createTextureFrom(pixels: UnsafeRawBufferPointer,
+	mutating func createTextureFrom(pixels: UnsafeRawBufferPointer,
 		createInfo info: inout SDL_GPUTextureCreateInfo, genMipmaps: Bool)
 		throws(NeHeError) -> OpaquePointer
 	{
@@ -208,7 +235,7 @@ fileprivate extension NeHeCopyPass
 			throw .sdlError("SDL_CreateGPUTexture", String(cString: SDL_GetError()))
 		}
 
-		// Create and copy image data to a transfer buffer
+		// Create a transfer buffer to hold the pixel data
 		var xferInfo = SDL_GPUTransferBufferCreateInfo(
 			usage: SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
 			size: UInt32(pixels.count),
@@ -218,10 +245,11 @@ fileprivate extension NeHeCopyPass
 			SDL_ReleaseGPUTexture(self.device, texture)
 			throw .sdlError("SDL_CreateGPUTransferBuffer", String(cString: SDL_GetError()))
 		}
-		defer { SDL_ReleaseGPUTransferBuffer(self.device, xferBuffer) }
 
+		// Copy the image pixel data to a transfer buffer
 		guard let map = SDL_MapGPUTransferBuffer(self.device, xferBuffer, false) else
 		{
+			SDL_ReleaseGPUTransferBuffer(self.device, xferBuffer)
 			SDL_ReleaseGPUTexture(self.device, texture)
 			throw .sdlError("SDL_MapGPUTransferBuffer", String(cString: SDL_GetError()))
 		}
@@ -230,41 +258,20 @@ fileprivate extension NeHeCopyPass
 			count: pixels.count)
 		SDL_UnmapGPUTransferBuffer(self.device, xferBuffer)
 
-		// Upload the transfer data to the GPU resources
-		guard let cmd = SDL_AcquireGPUCommandBuffer(self.device) else
-		{
-			SDL_ReleaseGPUTexture(self.device, texture)
-			throw .sdlError("SDL_AcquireGPUCommandBuffer", String(cString: SDL_GetError()))
-		}
-
-		let pass = SDL_BeginGPUCopyPass(cmd)
-		var source = SDL_GPUTextureTransferInfo()
-		source.transfer_buffer = xferBuffer
-		source.offset = 0
-		var destination = SDL_GPUTextureRegion()
-		destination.texture = texture
-		destination.w = info.width
-		destination.h = info.height
-		destination.d = info.layer_count_or_depth
-		SDL_UploadToGPUTexture(pass, &source, &destination, false)
-		SDL_EndGPUCopyPass(pass)
-
-		if genMipmaps
-		{
-			SDL_GenerateMipmapsForGPUTexture(cmd, texture)
-		}
-
-		SDL_SubmitGPUCommandBuffer(cmd)
+		self.copies.append(.texture(
+			texture: texture,
+			xferBuffer: xferBuffer,
+			size: .init(info.width, info.height),
+			genMipmaps: genMipmaps))
 		return texture
 	}
 }
 
 fileprivate extension NeHeCopyPass
 {
-	struct Copy
+	enum Copy
 	{
-		var buffer: OpaquePointer
-		var xferBuffer: OpaquePointer
-		var size: UInt32
+		case buffer(buffer: OpaquePointer, xferBuffer: OpaquePointer, size: UInt32)
+		case texture(texture: OpaquePointer, xferBuffer: OpaquePointer, size: Size<UInt32>, genMipmaps: Bool)
 	}
 }
