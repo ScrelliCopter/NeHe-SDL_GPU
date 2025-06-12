@@ -174,19 +174,6 @@ public extension NeHeCopyPass
 		default:                            (true, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM)
 		}
 
-		func BYTESPERPIXEL(_ format: SDL_PixelFormat) -> UInt32
-		{
-			let isFourCC = format.rawValue != 0 && (((format.rawValue >> 28) & 0xF) != 1)
-			return isFourCC
-				? [
-					SDL_PIXELFORMAT_YUY2,
-					SDL_PIXELFORMAT_UYVY,
-					SDL_PIXELFORMAT_YVYU,
-					SDL_PIXELFORMAT_P010
-				].contains(format) ? 2 : 1
-				: format.rawValue & 0xFF
-		}
-
 		let data: UnsafeRawBufferPointer
 		let conv: UnsafeMutablePointer<SDL_Surface>? = nil
 		if needsConvert
@@ -196,15 +183,13 @@ public extension NeHeCopyPass
 			{
 				throw .sdlError("SDL_ConvertSurface", String(cString: SDL_GetError()))
 			}
-			let numPixels = Int(conv.pointee.w) * Int(conv.pointee.h)
-			data = .init(start: conv.pointee.pixels, count: Int(BYTESPERPIXEL(conv.pointee.format)) * numPixels)
+			data = .init(start: conv.pointee.pixels, count: Int(conv.pointee.pitch) * Int(conv.pointee.h))
 		}
 		else
 		{
-			let numPixels = Int(surface.pointee.w) * Int(surface.pointee.h)
-			data = .init(start: surface.pointee.pixels, count: Int(BYTESPERPIXEL(surface.pointee.format)) * numPixels)
+			data = .init(start: surface.pointee.pixels, count: Int(surface.pointee.pitch) * Int(surface.pointee.h))
 		}
-		defer { SDL_DestroySurface(conv) }
+		defer { if needsConvert { SDL_DestroySurface(conv) } }
 
 		if genMipmaps
 		{
