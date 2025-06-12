@@ -24,13 +24,7 @@ public struct NeHeCopyPass: ~Copyable
 		// Free transfer buffers
 		for copy in self.copies.reversed()
 		{
-			switch copy
-			{
-			case .buffer(_, let xferBuffer, _):
-				SDL_ReleaseGPUTransferBuffer(self.device, xferBuffer)
-			case .texture(_, let xferBuffer, _, _):
-				SDL_ReleaseGPUTransferBuffer(self.device, xferBuffer)
-			}
+			SDL_ReleaseGPUTransferBuffer(self.device, copy.transferBuffer)
 		}
 	}
 
@@ -48,15 +42,15 @@ public struct NeHeCopyPass: ~Copyable
 		// Upload buffers and textures into the GPU buffer(s)
 		for copy in self.copies
 		{
-			switch copy
+			switch copy.payload
 			{
-			case .buffer(let buffer, let xferBuffer, let size):
-				var source = SDL_GPUTransferBufferLocation(transfer_buffer: xferBuffer, offset: 0)
+			case .buffer(let buffer, let size):
+				var source = SDL_GPUTransferBufferLocation(transfer_buffer: copy.transferBuffer, offset: 0)
 				var destination = SDL_GPUBufferRegion(buffer: buffer, offset: 0, size: size)
 				SDL_UploadToGPUBuffer(pass, &source, &destination, false)
-			case .texture(let texture, let xferBuffer, let size, _):
+			case .texture(let texture, let size, _):
 				var source = SDL_GPUTextureTransferInfo()
-				source.transfer_buffer = xferBuffer
+				source.transfer_buffer = copy.transferBuffer
 				source.offset = 0
 				var destination = SDL_GPUTextureRegion()
 				destination.texture = texture
@@ -71,7 +65,7 @@ public struct NeHeCopyPass: ~Copyable
 		SDL_EndGPUCopyPass(pass)
 
 		// Generate mipmaps if needed
-		for case .texture(let texture, _, _, let genMipmaps) in self.copies where genMipmaps
+		for case .texture(let texture, _, let genMipmaps) in self.copies.map(\.payload) where genMipmaps
 		{
 			SDL_GenerateMipmapsForGPUTexture(cmd, texture)
 		}
@@ -118,10 +112,9 @@ public extension NeHeCopyPass
 		}
 		SDL_UnmapGPUTransferBuffer(self.device, xferBuffer)
 
-		self.copies.append(.buffer(
-			buffer: buffer,
-			xferBuffer: xferBuffer,
-			size: size))
+		self.copies.append(.init(
+			transferBuffer: xferBuffer,
+			payload: .buffer(buffer: buffer, size: size)))
 		return buffer
 	}
 
@@ -258,20 +251,27 @@ fileprivate extension NeHeCopyPass
 			count: pixels.count)
 		SDL_UnmapGPUTransferBuffer(self.device, xferBuffer)
 
-		self.copies.append(.texture(
-			texture: texture,
-			xferBuffer: xferBuffer,
-			size: .init(info.width, info.height),
-			genMipmaps: genMipmaps))
+		self.copies.append(.init(
+			transferBuffer: xferBuffer,
+			payload: .texture(
+				texture: texture,
+				size: .init(info.width, info.height),
+				genMipmaps: genMipmaps)))
 		return texture
 	}
 }
 
 fileprivate extension NeHeCopyPass
 {
-	enum Copy
+	struct Copy
 	{
-		case buffer(buffer: OpaquePointer, xferBuffer: OpaquePointer, size: UInt32)
-		case texture(texture: OpaquePointer, xferBuffer: OpaquePointer, size: Size<UInt32>, genMipmaps: Bool)
+		enum Payload
+		{
+			case buffer(buffer: OpaquePointer, size: UInt32)
+			case texture(texture: OpaquePointer, size: Size<UInt32>, genMipmaps: Bool)
+		}
+
+		let transferBuffer: OpaquePointer
+		let payload: Payload
 	}
 }
