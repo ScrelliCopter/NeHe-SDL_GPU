@@ -104,7 +104,7 @@ char* NeHe_ResourcePath(const NeHeContext* restrict ctx, const char* const restr
 {
 	SDL_assert(ctx && ctx->baseDir && resourcePath);
 
-	// Build path to resouce: "{baseDir}/{resourcePath}"
+	// Build path to resource: "{baseDir}/{resourcePath}"
 	const size_t baseLen = SDL_strlen(ctx->baseDir);
 	const size_t resourcePathLen = SDL_strlen(resourcePath);
 	char* path = SDL_malloc(baseLen + resourcePathLen + 1);
