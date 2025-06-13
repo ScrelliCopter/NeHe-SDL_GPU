@@ -8,7 +8,7 @@ import SDLSwift
 import NeHe
 import simd
 
-struct Lesson8: AppDelegate
+struct Lesson9: AppDelegate
 {
 	struct Vertex
 	{
@@ -322,7 +322,7 @@ struct Lesson8: AppDelegate
 
 @main struct Program: AppRunner
 {
-	typealias Delegate = Lesson8
+	typealias Delegate = Lesson9
 	static let config = AppConfig(
 		title: "NeHe's Animated Blended Textures Tutorial",
 		width: 640,
