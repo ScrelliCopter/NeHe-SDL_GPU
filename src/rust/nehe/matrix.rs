@@ -132,9 +132,9 @@ impl Mtx
 		self.0[11] = r[6] * tmp[3] + r[7] * tmp[7] + r[8] * tmp[11];
 	}
 
-    #[inline(always)]
-    #[must_use]
-    pub const fn as_ptr(&self) -> *const f32 { self.0.as_ptr() }
+	#[inline(always)]
+	#[must_use]
+	pub const fn as_ptr(&self) -> *const f32 { self.0.as_ptr() }
 }
 
 impl Default for Mtx

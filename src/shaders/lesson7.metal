@@ -21,9 +21,9 @@ struct VertexUniform
 
 struct Light
 {
-    float4 ambient;
-    float4 diffuse;
-    float4 position;
+	float4 ambient;
+	float4 diffuse;
+	float4 position;
 };
 
 struct Vertex2Fragment
@@ -38,16 +38,16 @@ vertex Vertex2Fragment VertexMain(
 	constant VertexUniform& u [[buffer(0)]],
 	constant Light& light [[buffer(1)]])
 {
-    const auto position = u.modelView * float4(in.position, 1.0);
-    const auto normal = metal::normalize(u.modelView * float4(in.normal, 0.0)).xyz;
+	const auto position = u.modelView * float4(in.position, 1.0);
+	const auto normal = metal::normalize(u.modelView * float4(in.normal, 0.0)).xyz;
 
-    const auto lightVec = light.position.xyz - position.xyz;
-    const auto lightDist2 = metal::length_squared(lightVec);
-    const auto dir = metal::rsqrt(lightDist2) * lightVec;
-    const auto lambert = metal::max(0.0, metal::dot(normal, dir));
+	const auto lightVec = light.position.xyz - position.xyz;
+	const auto lightDist2 = metal::length_squared(lightVec);
+	const auto dir = metal::rsqrt(lightDist2) * lightVec;
+	const auto lambert = metal::max(0.0, metal::dot(normal, dir));
 
-    const auto ambient = 0.04 + 0.2 * half3(light.ambient.rgb);
-    const auto diffuse = 0.8 * half3(light.diffuse.rgb);
+	const auto ambient = 0.04 + 0.2 * half3(light.ambient.rgb);
+	const auto diffuse = 0.8 * half3(light.diffuse.rgb);
 
 	Vertex2Fragment out;
 	out.position = u.projection * position;
@@ -57,7 +57,7 @@ vertex Vertex2Fragment VertexMain(
 }
 
 fragment half4 FragmentMain(
-    Vertex2Fragment in [[stage_in]],
+	Vertex2Fragment in [[stage_in]],
 	metal::texture2d<half, metal::access::sample> texture [[texture(0)]],
 	metal::sampler sampler [[sampler(0)]])
 {
