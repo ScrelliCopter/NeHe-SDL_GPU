@@ -95,32 +95,32 @@ impl AppImplementation for Lesson2
 			},
 		];
 
-		let mut info = SDL_GPUGraphicsPipelineCreateInfo::default();
-		info.vertex_shader   = vertex_shader;
-		info.fragment_shader = fragment_shader;
-		info.primitive_type  = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-		info.vertex_input_state = SDL_GPUVertexInputState
+		let mut pso_info = SDL_GPUGraphicsPipelineCreateInfo::default();
+		pso_info.vertex_shader   = vertex_shader;
+		pso_info.fragment_shader = fragment_shader;
+		pso_info.primitive_type  = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+		pso_info.vertex_input_state = SDL_GPUVertexInputState
 		{
 			vertex_buffer_descriptions: VERTEX_DESCRIPTIONS.as_ptr(),
 			num_vertex_buffers: VERTEX_DESCRIPTIONS.len() as u32,
 			vertex_attributes: VERTEX_ATTRIBS.as_ptr(),
 			num_vertex_attributes: VERTEX_ATTRIBS.len() as u32,
 		};
-		info.rasterizer_state.fill_mode  = SDL_GPU_FILLMODE_FILL;
-		info.rasterizer_state.cull_mode  = SDL_GPU_CULLMODE_NONE;
-		info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
-		let colour_targets: &[SDL_GPUColorTargetDescription] =
-		&[
+		pso_info.rasterizer_state.fill_mode  = SDL_GPU_FILLMODE_FILL;
+		pso_info.rasterizer_state.cull_mode  = SDL_GPU_CULLMODE_NONE;
+		pso_info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
+		let color_targets =
+		[
 			SDL_GPUColorTargetDescription
 			{
 				format: unsafe { SDL_GetGPUSwapchainTextureFormat(ctx.device, ctx.window) },
 				blend_state: SDL_GPUColorTargetBlendState::default(),
 			}
 		];
-		info.target_info.color_target_descriptions = colour_targets.as_ptr();
-		info.target_info.num_color_targets = colour_targets.len() as u32;
+		pso_info.target_info.color_target_descriptions = color_targets.as_ptr();
+		pso_info.target_info.num_color_targets = color_targets.len() as u32;
 
-		self.pso = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &info) };
+		self.pso = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &pso_info) };
 		unsafe
 		{
 			SDL_ReleaseGPUShader(ctx.device, fragment_shader);

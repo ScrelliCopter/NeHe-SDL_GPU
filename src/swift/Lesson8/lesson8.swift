@@ -88,7 +88,6 @@ struct Lesson8: AppDelegate
 	var speed = SIMD2<Float>(repeating: 0.0)
 	var z: Float = -5.0
 
-
 	mutating func `init`(ctx: inout NeHeContext) throws(NeHeError)
 	{
 		let (vertexShaderUnlit, fragmentShaderUnlit) = try ctx.loadShaders(name: "lesson6",
@@ -251,7 +250,7 @@ struct Lesson8: AppDelegate
 	}
 
 	mutating func draw(ctx: inout NeHeContext, cmd: OpaquePointer,
-		swapchain: OpaquePointer, swapchainSize: Size<UInt32>) throws(NeHe.NeHeError)
+		swapchain: OpaquePointer, swapchainSize: Size<UInt32>) throws(NeHeError)
 	{
 		var colorInfo = SDL_GPUColorTargetInfo()
 		colorInfo.texture     = swapchain

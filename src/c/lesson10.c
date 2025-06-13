@@ -126,7 +126,7 @@ static bool Lesson10_Init(NeHeContext* ctx)
 			.offset = offsetof(Vertex, u)
 		}
 	};
-	SDL_GPUGraphicsPipelineCreateInfo info =
+	SDL_GPUGraphicsPipelineCreateInfo psoInfo =
 	{
 		.vertex_shader = vertexShader,
 		.fragment_shader = fragmentShader,
@@ -157,7 +157,7 @@ static bool Lesson10_Init(NeHeContext* ctx)
 
 	// Setup blend pipeline
 	const SDL_GPUTextureFormat swapchainTextureFormat = SDL_GetGPUSwapchainTextureFormat(ctx->device, ctx->window);
-	info.target_info.color_target_descriptions = &(const SDL_GPUColorTargetDescription)
+	psoInfo.target_info.color_target_descriptions = &(const SDL_GPUColorTargetDescription)
 	{
 		.format = swapchainTextureFormat,
 		.blend_state =
@@ -171,7 +171,7 @@ static bool Lesson10_Init(NeHeContext* ctx)
 			.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE
 		}
 	};
-	psoBlend = SDL_CreateGPUGraphicsPipeline(ctx->device, &info);
+	psoBlend = SDL_CreateGPUGraphicsPipeline(ctx->device, &psoInfo);
 	if (!psoBlend)
 	{
 		SDL_ReleaseGPUShader(ctx->device, fragmentShader);
@@ -181,19 +181,19 @@ static bool Lesson10_Init(NeHeContext* ctx)
 	}
 
 	// Setup regular pipeline w/ depth testing
-	info.depth_stencil_state = (SDL_GPUDepthStencilState)
+	psoInfo.depth_stencil_state = (SDL_GPUDepthStencilState)
 	{
 		.compare_op = SDL_GPU_COMPAREOP_LESS,  // Pass if pixel depth value tests less than the depth buffer value
 		.enable_depth_test = true,             // Enable depth testing
 		.enable_depth_write = true
 	};
-	info.target_info.color_target_descriptions = &(const SDL_GPUColorTargetDescription)
+	psoInfo.target_info.color_target_descriptions = &(const SDL_GPUColorTargetDescription)
 	{
 		.format = swapchainTextureFormat
 	};
-	info.target_info.depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D16_UNORM;
-	info.target_info.has_depth_stencil_target = true;
-	pso = SDL_CreateGPUGraphicsPipeline(ctx->device, &info);
+	psoInfo.target_info.depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D16_UNORM;
+	psoInfo.target_info.has_depth_stencil_target = true;
+	pso = SDL_CreateGPUGraphicsPipeline(ctx->device, &psoInfo);
 	SDL_ReleaseGPUShader(ctx->device, fragmentShader);
 	SDL_ReleaseGPUShader(ctx->device, vertexShader);
 	if (!pso)

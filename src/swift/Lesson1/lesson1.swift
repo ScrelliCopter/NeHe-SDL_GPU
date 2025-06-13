@@ -17,8 +17,8 @@ struct Lesson1: AppDelegate
 		colorInfo.load_op     = SDL_GPU_LOADOP_CLEAR
 		colorInfo.store_op    = SDL_GPU_STOREOP_STORE
 
-		let pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, nil);
-		SDL_EndGPURenderPass(pass);
+		let pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, nil)
+		SDL_EndGPURenderPass(pass)
 	}
 }
 

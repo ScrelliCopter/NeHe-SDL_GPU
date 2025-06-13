@@ -34,7 +34,7 @@ struct Lesson3: AppDelegate
 		Vertex(.init(-1.0, -1.0, 0.0), .init(0.5, 0.5, 1.0, 1.0)),  // Bottom left
 	]
 
-	static let indices: [Int16] =
+	static let indices: [UInt16] =
 	[
 		// Triangle
 		0, 1, 2,
@@ -77,7 +77,7 @@ struct Lesson3: AppDelegate
 				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
 				offset: UInt32(MemoryLayout<Vertex>.offset(of: \.color)!)),
 		]
-		let colourTargets: [SDL_GPUColorTargetDescription] =
+		let colorTargets: [SDL_GPUColorTargetDescription] =
 		[
 			SDL_GPUColorTargetDescription(
 				format: SDL_GetGPUSwapchainTextureFormat(ctx.device, ctx.window),
@@ -88,8 +88,8 @@ struct Lesson3: AppDelegate
 		rasterizerDesc.cull_mode  = SDL_GPU_CULLMODE_NONE
 		rasterizerDesc.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE
 		var targetInfo = SDL_GPUGraphicsPipelineTargetInfo()
-		targetInfo.color_target_descriptions = colourTargets.withUnsafeBufferPointer(\.baseAddress!)
-		targetInfo.num_color_targets         = UInt32(colourTargets.count)
+		targetInfo.color_target_descriptions = colorTargets.withUnsafeBufferPointer(\.baseAddress!)
+		targetInfo.num_color_targets         = UInt32(colorTargets.count)
 
 		var info = SDL_GPUGraphicsPipelineCreateInfo(
 			vertex_shader: vertexShader,
@@ -140,7 +140,7 @@ struct Lesson3: AppDelegate
 		colorInfo.store_op    = SDL_GPU_STOREOP_STORE
 
 		// Begin pass & bind pipeline state
-		let pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, nil);
+		let pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, nil)
 		SDL_BindGPUGraphicsPipeline(pass, self.pso)
 
 		// Bind vertex & index buffers
@@ -162,7 +162,7 @@ struct Lesson3: AppDelegate
 		SDL_PushGPUVertexUniformData(cmd, 0, &viewProj, UInt32(MemoryLayout<simd_float4x4>.size))
 		SDL_DrawGPUIndexedPrimitives(pass, 6, 1, 3, 0, 0)
 
-		SDL_EndGPURenderPass(pass);
+		SDL_EndGPURenderPass(pass)
 	}
 }
 

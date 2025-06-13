@@ -130,36 +130,30 @@ struct Lesson7: AppDelegate
 				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
 				offset: UInt32(MemoryLayout<Vertex>.offset(of: \.texcoord)!)),
 		]
-		let colourTargets: [SDL_GPUColorTargetDescription] =
-		[
-			SDL_GPUColorTargetDescription(
-				format: SDL_GetGPUSwapchainTextureFormat(ctx.device, ctx.window),
-				blend_state: SDL_GPUColorTargetBlendState())
-		]
-		var rasterizerDesc = SDL_GPURasterizerState()
-		rasterizerDesc.fill_mode  = SDL_GPU_FILLMODE_FILL
-		rasterizerDesc.cull_mode  = SDL_GPU_CULLMODE_NONE
-		rasterizerDesc.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE
-		var depthStencilState = SDL_GPUDepthStencilState()
-		depthStencilState.compare_op         = SDL_GPU_COMPAREOP_LESS_OR_EQUAL
-		depthStencilState.enable_depth_test  = true
-		depthStencilState.enable_depth_write = true
-		var targetInfo = SDL_GPUGraphicsPipelineTargetInfo()
-		targetInfo.color_target_descriptions = colourTargets.withUnsafeBufferPointer(\.baseAddress!)
-		targetInfo.num_color_targets         = UInt32(colourTargets.count)
-		targetInfo.depth_stencil_format      = SDL_GPU_TEXTUREFORMAT_D16_UNORM
-		targetInfo.has_depth_stencil_target  = true
 
 		var info = SDL_GPUGraphicsPipelineCreateInfo()
+		info.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST
 		info.vertex_input_state = SDL_GPUVertexInputState(
 			vertex_buffer_descriptions: vertexDescriptions.withUnsafeBufferPointer(\.baseAddress!),
 			num_vertex_buffers: UInt32(vertexDescriptions.count),
 			vertex_attributes: vertexAttributes.withUnsafeBufferPointer(\.baseAddress!),
 			num_vertex_attributes: UInt32(vertexAttributes.count))
-		info.primitive_type      = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST
-		info.rasterizer_state    = rasterizerDesc
-		info.depth_stencil_state = depthStencilState
-		info.target_info         = targetInfo
+		info.rasterizer_state.fill_mode  = SDL_GPU_FILLMODE_FILL
+		info.rasterizer_state.cull_mode  = SDL_GPU_CULLMODE_NONE
+		info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE
+		info.depth_stencil_state.compare_op         = SDL_GPU_COMPAREOP_LESS_OR_EQUAL
+		info.depth_stencil_state.enable_depth_test  = true
+		info.depth_stencil_state.enable_depth_write = true
+		let colorTargets =
+		[
+			SDL_GPUColorTargetDescription(
+				format: SDL_GetGPUSwapchainTextureFormat(ctx.device, ctx.window),
+				blend_state: SDL_GPUColorTargetBlendState()),
+		]
+		info.target_info.color_target_descriptions = colorTargets.withUnsafeBufferPointer(\.baseAddress!)
+		info.target_info.num_color_targets         = UInt32(colorTargets.count)
+		info.target_info.depth_stencil_format      = SDL_GPU_TEXTUREFORMAT_D16_UNORM
+		info.target_info.has_depth_stencil_target  = true
 
 		// Create unlit pipeline
 		info.vertex_shader   = vertexShaderUnlit
@@ -222,8 +216,8 @@ struct Lesson7: AppDelegate
 		self.projection = .perspective(fovy: 45, aspect: aspect, near: 0.1, far: 100)
 	}
 
-	mutating func draw(ctx: inout NeHeContext,
-		cmd: OpaquePointer, swapchain: OpaquePointer, swapchainSize: Size<UInt32>) throws(NeHeError)
+	mutating func draw(ctx: inout NeHeContext, cmd: OpaquePointer,
+		swapchain: OpaquePointer, swapchainSize: Size<UInt32>) throws(NeHeError)
 	{
 		var colorInfo = SDL_GPUColorTargetInfo()
 		colorInfo.texture     = swapchain
@@ -241,7 +235,7 @@ struct Lesson7: AppDelegate
 		depthInfo.cycle            = true
 
 		// Begin pass & bind pipeline state
-		let pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, &depthInfo);
+		let pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, &depthInfo)
 		SDL_BindGPUGraphicsPipeline(pass, self.lighting ? self.psoLight : self.psoUnlit)
 
 		// Bind texture
@@ -282,7 +276,7 @@ struct Lesson7: AppDelegate
 		// Draw textured cube
 		SDL_DrawGPUIndexedPrimitives(pass, UInt32(Self.indices.count), 1, 0, 0, 0)
 
-		SDL_EndGPURenderPass(pass);
+		SDL_EndGPURenderPass(pass)
 
 		let keys = SDL_GetKeyboardState(nil)!
 

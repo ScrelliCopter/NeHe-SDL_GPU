@@ -109,7 +109,7 @@ struct Lesson5: AppDelegate
 				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
 				offset: UInt32(MemoryLayout<Vertex>.offset(of: \.color)!)),
 		]
-		let colourTargets: [SDL_GPUColorTargetDescription] =
+		let colorTargets: [SDL_GPUColorTargetDescription] =
 		[
 			SDL_GPUColorTargetDescription(
 				format: SDL_GetGPUSwapchainTextureFormat(ctx.device, ctx.window),
@@ -124,8 +124,8 @@ struct Lesson5: AppDelegate
 		depthStencilState.enable_depth_test  = true
 		depthStencilState.enable_depth_write = true
 		var targetInfo = SDL_GPUGraphicsPipelineTargetInfo()
-		targetInfo.color_target_descriptions = colourTargets.withUnsafeBufferPointer(\.baseAddress!)
-		targetInfo.num_color_targets         = UInt32(colourTargets.count)
+		targetInfo.color_target_descriptions = colorTargets.withUnsafeBufferPointer(\.baseAddress!)
+		targetInfo.num_color_targets         = UInt32(colorTargets.count)
 		targetInfo.depth_stencil_format      = SDL_GPU_TEXTUREFORMAT_D16_UNORM
 		targetInfo.has_depth_stencil_target  = true
 
@@ -187,7 +187,7 @@ struct Lesson5: AppDelegate
 		depthInfo.cycle            = true
 
 		// Begin pass & bind pipeline state
-		let pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, &depthInfo);
+		let pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, &depthInfo)
 		SDL_BindGPUGraphicsPipeline(pass, self.pso)
 
 		// Bind vertex & index buffers
@@ -197,21 +197,21 @@ struct Lesson5: AppDelegate
 			vtxBindings.withUnsafeBufferPointer(\.baseAddress!), UInt32(vtxBindings.count))
 		SDL_BindGPUIndexBuffer(pass, &idxBinding, SDL_GPU_INDEXELEMENTSIZE_16BIT)
 
-		// Draw triangle 1.5 units to the left and 6 units into the camera
+		// Draw pyramid 1.5 units to the left and 6 units into the camera
 		var model: simd_float4x4 = .translation(.init(-1.5, 0.0, -6.0))
 		model.rotate(angle: self.rotTri, axis: .init(0, 1, 0))
 		var viewProj = self.projection * model
 		SDL_PushGPUVertexUniformData(cmd, 0, &viewProj, UInt32(MemoryLayout<simd_float4x4>.size))
 		SDL_DrawGPUIndexedPrimitives(pass, 12, 1, 0, 0, 0)
 
-		// Draw quad 1.5 units to the right and 7 units into the camera
+		// Draw cube 1.5 units to the right and 7 units into the camera
 		model = .translation(.init(1.5, 0.0, -7.0))
 		model.rotate(angle: self.rotQuad, axis: .init(1, 1, 1))
 		viewProj = self.projection * model
 		SDL_PushGPUVertexUniformData(cmd, 0, &viewProj, UInt32(MemoryLayout<simd_float4x4>.size))
 		SDL_DrawGPUIndexedPrimitives(pass, 36, 1, 12, 0, 0)
 
-		SDL_EndGPURenderPass(pass);
+		SDL_EndGPURenderPass(pass)
 
 		self.rotTri += 0.2
 		self.rotQuad -= 0.15

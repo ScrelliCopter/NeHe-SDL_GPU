@@ -20,6 +20,7 @@ struct Lesson4: AppDelegate
 			self.color = color
 		}
 	}
+
 	static let vertices =
 	[
 		// Triangle
@@ -33,7 +34,7 @@ struct Lesson4: AppDelegate
 		Vertex(.init(-1.0, -1.0, 0.0), .init(0.5, 0.5, 1.0, 1.0)),  // Bottom left
 	]
 
-	static let indices: [Int16] =
+	static let indices: [UInt16] =
 	[
 		// Triangle
 		0, 1, 2,
@@ -78,7 +79,7 @@ struct Lesson4: AppDelegate
 				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
 				offset: UInt32(MemoryLayout<Vertex>.offset(of: \.color)!)),
 		]
-		let colourTargets: [SDL_GPUColorTargetDescription] =
+		let colorTargets: [SDL_GPUColorTargetDescription] =
 		[
 			SDL_GPUColorTargetDescription(
 				format: SDL_GetGPUSwapchainTextureFormat(ctx.device, ctx.window),
@@ -89,8 +90,8 @@ struct Lesson4: AppDelegate
 		rasterizerDesc.cull_mode  = SDL_GPU_CULLMODE_NONE
 		rasterizerDesc.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE
 		var targetInfo = SDL_GPUGraphicsPipelineTargetInfo()
-		targetInfo.color_target_descriptions = colourTargets.withUnsafeBufferPointer(\.baseAddress!)
-		targetInfo.num_color_targets         = UInt32(colourTargets.count)
+		targetInfo.color_target_descriptions = colorTargets.withUnsafeBufferPointer(\.baseAddress!)
+		targetInfo.num_color_targets         = UInt32(colorTargets.count)
 
 		var info = SDL_GPUGraphicsPipelineCreateInfo(
 			vertex_shader: vertexShader,
@@ -141,7 +142,7 @@ struct Lesson4: AppDelegate
 		colorInfo.store_op    = SDL_GPU_STOREOP_STORE
 
 		// Begin pass & bind pipeline state
-		let pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, nil);
+		let pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, nil)
 		SDL_BindGPUGraphicsPipeline(pass, self.pso)
 
 		// Bind vertex & index buffers
@@ -158,14 +159,14 @@ struct Lesson4: AppDelegate
 		SDL_PushGPUVertexUniformData(cmd, 0, &viewProj, UInt32(MemoryLayout<simd_float4x4>.size))
 		SDL_DrawGPUIndexedPrimitives(pass, 3, 1, 0, 0, 0)
 
-		// Draw quad 1.5 units to the right and 6 units in
+		// Draw quad 1.5 units to the right and 6 units into the camera
 		model = .translation(.init(1.5, 0.0, -6.0))
 		model.rotate(angle: self.rotQuad, axis: .init(1, 0, 0))
 		viewProj = self.projection * model
 		SDL_PushGPUVertexUniformData(cmd, 0, &viewProj, UInt32(MemoryLayout<simd_float4x4>.size))
 		SDL_DrawGPUIndexedPrimitives(pass, 6, 1, 3, 0, 0)
 
-		SDL_EndGPURenderPass(pass);
+		SDL_EndGPURenderPass(pass)
 
 		self.rotTri += 0.2
 		self.rotQuad -= 0.15

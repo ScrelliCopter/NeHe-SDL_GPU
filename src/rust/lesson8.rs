@@ -181,67 +181,66 @@ impl AppImplementation for Lesson8
 			},
 		];
 
-		let mut info = SDL_GPUGraphicsPipelineCreateInfo::default();
-		info.primitive_type  = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-		info.vertex_input_state = SDL_GPUVertexInputState
+		let mut pso_info = SDL_GPUGraphicsPipelineCreateInfo::default();
+		pso_info.primitive_type  = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+		pso_info.vertex_input_state = SDL_GPUVertexInputState
 		{
 			vertex_buffer_descriptions: VERTEX_DESCRIPTIONS.as_ptr(),
 			num_vertex_buffers: VERTEX_DESCRIPTIONS.len() as u32,
 			vertex_attributes: VERTEX_ATTRIBS.as_ptr(),
 			num_vertex_attributes: VERTEX_ATTRIBS.len() as u32,
 		};
-		info.rasterizer_state.fill_mode  = SDL_GPU_FILLMODE_FILL;
-		info.rasterizer_state.cull_mode  = SDL_GPU_CULLMODE_NONE;
-		info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
+		pso_info.rasterizer_state.fill_mode  = SDL_GPU_FILLMODE_FILL;
+		pso_info.rasterizer_state.cull_mode  = SDL_GPU_CULLMODE_NONE;
+		pso_info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
 
 		// Common pipeline depth & colour target options
-
-		let mut color_target = [ SDL_GPUColorTargetDescription::default() ];
-		color_target[0].format = unsafe { SDL_GetGPUSwapchainTextureFormat(ctx.device, ctx.window) };
-		info.target_info.color_target_descriptions = color_target.as_ptr();
-		info.target_info.num_color_targets         = 1;
-		info.target_info.depth_stencil_format      = Self::CREATE_DEPTH_BUFFER;
-		info.target_info.has_depth_stencil_target  = true;
-		info.depth_stencil_state.compare_op        = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+		let mut color_targets = [ SDL_GPUColorTargetDescription::default() ];
+		color_targets[0].format = unsafe { SDL_GetGPUSwapchainTextureFormat(ctx.device, ctx.window) };
+		pso_info.target_info.color_target_descriptions = color_targets.as_ptr();
+		pso_info.target_info.num_color_targets         = 1;
+		pso_info.target_info.depth_stencil_format      = Self::CREATE_DEPTH_BUFFER;
+		pso_info.target_info.has_depth_stencil_target  = true;
+		pso_info.depth_stencil_state.compare_op        = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
 
 		// Setup depth/stencil & colour pipeline state for no blending
-		info.depth_stencil_state.enable_depth_test  = true;
-		info.depth_stencil_state.enable_depth_write = true;
-		color_target[0].blend_state = unsafe { std::mem::zeroed() };
+		pso_info.depth_stencil_state.enable_depth_test  = true;
+		pso_info.depth_stencil_state.enable_depth_write = true;
+		color_targets[0].blend_state = unsafe { std::mem::zeroed() };
 
 		// Create unlit pipeline
-		info.vertex_shader   = vertex_shader_unlit;
-		info.fragment_shader = fragment_shader_unlit;
-		self.pso_unlit = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &info).as_mut() }
+		pso_info.vertex_shader   = vertex_shader_unlit;
+		pso_info.fragment_shader = fragment_shader_unlit;
+		self.pso_unlit = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &pso_info).as_mut() }
 			.ok_or(NeHeError::sdl("SDL_CreateGPUGraphicsPipeline"))?;
 
 		// Create lit pipeline
-		info.vertex_shader   = vertex_shader_light;
-		info.fragment_shader = fragment_shader_light;
-		self.pso_light = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &info).as_mut() }
+		pso_info.vertex_shader   = vertex_shader_light;
+		pso_info.fragment_shader = fragment_shader_light;
+		self.pso_light = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &pso_info).as_mut() }
 			.ok_or(NeHeError::sdl("SDL_CreateGPUGraphicsPipeline"))?;
 
 		// Setup depth/stencil & colour pipeline state for blending
-		info.depth_stencil_state.enable_depth_test  = false;
-		info.depth_stencil_state.enable_depth_write = false;
-		color_target[0].blend_state.enable_blend = true;
-		color_target[0].blend_state.color_blend_op = SDL_GPU_BLENDOP_ADD;
-		color_target[0].blend_state.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
-		color_target[0].blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
-		color_target[0].blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
-		color_target[0].blend_state.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
-		color_target[0].blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
+		pso_info.depth_stencil_state.enable_depth_test  = false;
+		pso_info.depth_stencil_state.enable_depth_write = false;
+		color_targets[0].blend_state.enable_blend = true;
+		color_targets[0].blend_state.color_blend_op = SDL_GPU_BLENDOP_ADD;
+		color_targets[0].blend_state.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
+		color_targets[0].blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+		color_targets[0].blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
+		color_targets[0].blend_state.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+		color_targets[0].blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
 
 		// Create unlit blended pipeline
-		info.vertex_shader   = vertex_shader_unlit;
-		info.fragment_shader = fragment_shader_unlit;
-		self.pso_blend_unlit = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &info).as_mut() }
+		pso_info.vertex_shader   = vertex_shader_unlit;
+		pso_info.fragment_shader = fragment_shader_unlit;
+		self.pso_blend_unlit = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &pso_info).as_mut() }
 			.ok_or(NeHeError::sdl("SDL_CreateGPUGraphicsPipeline"))?;
 
 		// Create lit blended pipeline
-		info.vertex_shader   = vertex_shader_light;
-		info.fragment_shader = fragment_shader_light;
-		self.pso_blend_light = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &info).as_mut() }
+		pso_info.vertex_shader   = vertex_shader_light;
+		pso_info.fragment_shader = fragment_shader_light;
+		self.pso_blend_light = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &pso_info).as_mut() }
 			.ok_or(NeHeError::sdl("SDL_CreateGPUGraphicsPipeline"))?;
 
 		// Free shaders

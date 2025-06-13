@@ -105,7 +105,7 @@ struct Lesson6: AppDelegate
 				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
 				offset: UInt32(MemoryLayout<Vertex>.offset(of: \.texcoord)!)),
 		]
-		let colourTargets: [SDL_GPUColorTargetDescription] =
+		let colorTargets: [SDL_GPUColorTargetDescription] =
 		[
 			SDL_GPUColorTargetDescription(
 				format: SDL_GetGPUSwapchainTextureFormat(ctx.device, ctx.window),
@@ -120,8 +120,8 @@ struct Lesson6: AppDelegate
 		depthStencilState.enable_depth_test  = true
 		depthStencilState.enable_depth_write = true
 		var targetInfo = SDL_GPUGraphicsPipelineTargetInfo()
-		targetInfo.color_target_descriptions = colourTargets.withUnsafeBufferPointer(\.baseAddress!)
-		targetInfo.num_color_targets         = UInt32(colourTargets.count)
+		targetInfo.color_target_descriptions = colorTargets.withUnsafeBufferPointer(\.baseAddress!)
+		targetInfo.num_color_targets         = UInt32(colorTargets.count)
 		targetInfo.depth_stencil_format      = SDL_GPU_TEXTUREFORMAT_D16_UNORM
 		targetInfo.has_depth_stencil_target  = true
 
@@ -176,8 +176,8 @@ struct Lesson6: AppDelegate
 		self.projection = .perspective(fovy: 45, aspect: aspect, near: 0.1, far: 100)
 	}
 
-	mutating func draw(ctx: inout NeHeContext,
-		cmd: OpaquePointer, swapchain: OpaquePointer, swapchainSize: Size<UInt32>) throws(NeHeError)
+	mutating func draw(ctx: inout NeHeContext, cmd: OpaquePointer,
+		swapchain: OpaquePointer, swapchainSize: Size<UInt32>) throws(NeHeError)
 	{
 		var colorInfo = SDL_GPUColorTargetInfo()
 		colorInfo.texture     = swapchain
@@ -195,7 +195,7 @@ struct Lesson6: AppDelegate
 		depthInfo.cycle            = true
 
 		// Begin pass & bind pipeline state
-		let pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, &depthInfo);
+		let pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, &depthInfo)
 		SDL_BindGPUGraphicsPipeline(pass, self.pso)
 
 		// Bind texture
@@ -211,7 +211,7 @@ struct Lesson6: AppDelegate
 
 		struct Uniforms { var modelViewProj: simd_float4x4, color: SIMD4<Float> }
 
-		// Move cube 5 units into the screen and apply some rotations
+		// Move cube 5 units into the camera and apply some rotations
 		var model: simd_float4x4 = .translation(.init(0.0, 0.0, -5.0))
 		model.rotate(angle: rot.x, axis: .init(1.0, 0.0, 0.0))
 		model.rotate(angle: rot.y, axis: .init(0.0, 1.0, 0.0))
@@ -226,7 +226,7 @@ struct Lesson6: AppDelegate
 		// Draw textured cube
 		SDL_DrawGPUIndexedPrimitives(pass, UInt32(Self.indices.count), 1, 0, 0, 0)
 
-		SDL_EndGPURenderPass(pass);
+		SDL_EndGPURenderPass(pass)
 
 		self.rot += .init(0.3, 0.2, 0.4)
 	}
