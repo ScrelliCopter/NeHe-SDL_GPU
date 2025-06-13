@@ -36,3 +36,7 @@ path = "src/rust/lesson6.rs"
 [[bin]]
 name = "lesson7"
 path = "src/rust/lesson7.rs"
+
+[[bin]]
+name = "lesson8"
+path = "src/rust/lesson8.rs"

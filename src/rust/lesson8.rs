@@ -10,7 +10,7 @@ use nehe::error::NeHeError;
 use nehe::matrix::Mtx;
 use sdl3_sys::gpu::*;
 use sdl3_sys::keyboard::SDL_GetKeyboardState;
-use sdl3_sys::keycode::{SDL_Keycode, SDLK_F, SDLK_L};
+use sdl3_sys::keycode::{SDL_Keycode, SDLK_B, SDLK_F, SDLK_L};
 use sdl3_sys::pixels::SDL_FColor;
 use sdl3_sys::scancode::{SDL_SCANCODE_DOWN, SDL_SCANCODE_LEFT, SDL_SCANCODE_PAGEDOWN, SDL_SCANCODE_PAGEUP, SDL_SCANCODE_RIGHT, SDL_SCANCODE_UP};
 use std::cmp::max;
@@ -79,10 +79,12 @@ struct Light
 	position: (f32, f32, f32, f32),
 }
 
-struct Lesson7
+struct Lesson8
 {
 	pso_unlit: *mut SDL_GPUGraphicsPipeline,
 	pso_light: *mut SDL_GPUGraphicsPipeline,
+	pso_blend_unlit: *mut SDL_GPUGraphicsPipeline,
+	pso_blend_light: *mut SDL_GPUGraphicsPipeline,
 	vtx_buffer: *mut SDL_GPUBuffer,
 	idx_buffer: *mut SDL_GPUBuffer,
 	samplers: [*mut SDL_GPUSampler; 3],
@@ -90,6 +92,7 @@ struct Lesson7
 	projection: Mtx,
 
 	lighting: bool,
+	blending: bool,
 	light: Light,
 	filter: usize,
 
@@ -98,7 +101,7 @@ struct Lesson7
 	z: f32,
 }
 
-impl Default for Lesson7
+impl Default for Lesson8
 {
 	fn default() -> Self
 	{
@@ -106,6 +109,8 @@ impl Default for Lesson7
 		{
 			pso_unlit: null_mut(),
 			pso_light: null_mut(),
+			pso_blend_unlit: null_mut(),
+			pso_blend_light: null_mut(),
 			vtx_buffer: null_mut(),
 			idx_buffer: null_mut(),
 			samplers: [null_mut(); 3],
@@ -113,6 +118,7 @@ impl Default for Lesson7
 			projection: Mtx::IDENTITY,
 
 			lighting: false,
+			blending: false,
 			light: Light
 			{
 				ambient:  (0.5, 0.5, 0.5, 1.0),
@@ -128,9 +134,9 @@ impl Default for Lesson7
 	}
 }
 
-impl AppImplementation for Lesson7
+impl AppImplementation for Lesson8
 {
-	const TITLE: &'static str = "NeHe's Textures, Lighting & Keyboard Tutorial";
+	const TITLE: &'static str = "Tom Stanis & NeHe's Blending Tutorial";
 	const WIDTH: i32 = 640;
 	const HEIGHT: i32 = 480;
 	const CREATE_DEPTH_BUFFER: SDL_GPUTextureFormat = SDL_GPU_TEXTUREFORMAT_D16_UNORM;
@@ -187,55 +193,64 @@ impl AppImplementation for Lesson7
 		info.rasterizer_state.fill_mode  = SDL_GPU_FILLMODE_FILL;
 		info.rasterizer_state.cull_mode  = SDL_GPU_CULLMODE_NONE;
 		info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
-		let colour_targets: &[SDL_GPUColorTargetDescription] =
-		&[
-			SDL_GPUColorTargetDescription
-			{
-				format: unsafe { SDL_GetGPUSwapchainTextureFormat(ctx.device, ctx.window) },
-				blend_state: SDL_GPUColorTargetBlendState::default(),
-			}
-		];
-		info.target_info.color_target_descriptions = colour_targets.as_ptr();
-		info.target_info.num_color_targets         = colour_targets.len() as u32;
-		info.target_info.depth_stencil_format      = SDL_GPU_TEXTUREFORMAT_D16_UNORM;
-		info.target_info.has_depth_stencil_target  = true;
 
-		info.depth_stencil_state.compare_op         = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+		// Common pipeline depth & colour target options
+
+		let mut color_target = [ SDL_GPUColorTargetDescription::default() ];
+		color_target[0].format = unsafe { SDL_GetGPUSwapchainTextureFormat(ctx.device, ctx.window) };
+		info.target_info.color_target_descriptions = color_target.as_ptr();
+		info.target_info.num_color_targets         = 1;
+		info.target_info.depth_stencil_format      = Self::CREATE_DEPTH_BUFFER;
+		info.target_info.has_depth_stencil_target  = true;
+		info.depth_stencil_state.compare_op        = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+
+		// Setup depth/stencil & colour pipeline state for no blending
 		info.depth_stencil_state.enable_depth_test  = true;
 		info.depth_stencil_state.enable_depth_write = true;
+		color_target[0].blend_state = unsafe { std::mem::zeroed() };
 
 		// Create unlit pipeline
 		info.vertex_shader   = vertex_shader_unlit;
 		info.fragment_shader = fragment_shader_unlit;
-		self.pso_unlit = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &info) };
-		unsafe
-		{
-			SDL_ReleaseGPUShader(ctx.device, fragment_shader_unlit);
-			SDL_ReleaseGPUShader(ctx.device, vertex_shader_unlit);
-		}
-		if self.pso_unlit.is_null()
-		{
-			let err = NeHeError::sdl("SDL_CreateGPUGraphicsPipeline");
-			unsafe
-			{
-				SDL_ReleaseGPUShader(ctx.device, fragment_shader_light);
-				SDL_ReleaseGPUShader(ctx.device, vertex_shader_light);
-			}
-			return Err(err);
-		}
+		self.pso_unlit = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &info).as_mut() }
+			.ok_or(NeHeError::sdl("SDL_CreateGPUGraphicsPipeline"))?;
 
 		// Create lit pipeline
 		info.vertex_shader   = vertex_shader_light;
 		info.fragment_shader = fragment_shader_light;
-		self.pso_light = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &info) };
+		self.pso_light = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &info).as_mut() }
+			.ok_or(NeHeError::sdl("SDL_CreateGPUGraphicsPipeline"))?;
+
+		// Setup depth/stencil & colour pipeline state for blending
+		info.depth_stencil_state.enable_depth_test  = false;
+		info.depth_stencil_state.enable_depth_write = false;
+		color_target[0].blend_state.enable_blend = true;
+		color_target[0].blend_state.color_blend_op = SDL_GPU_BLENDOP_ADD;
+		color_target[0].blend_state.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
+		color_target[0].blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+		color_target[0].blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
+		color_target[0].blend_state.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+		color_target[0].blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
+
+		// Create unlit blended pipeline
+		info.vertex_shader   = vertex_shader_unlit;
+		info.fragment_shader = fragment_shader_unlit;
+		self.pso_blend_unlit = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &info).as_mut() }
+			.ok_or(NeHeError::sdl("SDL_CreateGPUGraphicsPipeline"))?;
+
+		// Create lit blended pipeline
+		info.vertex_shader   = vertex_shader_light;
+		info.fragment_shader = fragment_shader_light;
+		self.pso_blend_light = unsafe { SDL_CreateGPUGraphicsPipeline(ctx.device, &info).as_mut() }
+			.ok_or(NeHeError::sdl("SDL_CreateGPUGraphicsPipeline"))?;
+
+		// Free shaders
 		unsafe
 		{
 			SDL_ReleaseGPUShader(ctx.device, fragment_shader_light);
 			SDL_ReleaseGPUShader(ctx.device, vertex_shader_light);
-		}
-		if self.pso_light.is_null()
-		{
-			return Err(NeHeError::sdl("SDL_CreateGPUGraphicsPipeline"));
+			SDL_ReleaseGPUShader(ctx.device, fragment_shader_unlit);
+			SDL_ReleaseGPUShader(ctx.device, vertex_shader_unlit);
 		}
 
 		// Create texture samplers
@@ -256,7 +271,7 @@ impl AppImplementation for Lesson7
 
 		ctx.copy_pass(|pass|
 		{
-			self.texture = pass.load_texture("Data/Crate.bmp", true, true)?;
+			self.texture = pass.load_texture("Data/Glass.bmp", true, true)?;
 			self.vtx_buffer = pass.create_buffer(SDL_GPU_BUFFERUSAGE_VERTEX, VERTICES)?;
 			self.idx_buffer = pass.create_buffer(SDL_GPU_BUFFERUSAGE_INDEX, INDICES)?;
 			Ok(())
@@ -271,6 +286,8 @@ impl AppImplementation for Lesson7
 			SDL_ReleaseGPUBuffer(ctx.device, self.vtx_buffer);
 			SDL_ReleaseGPUTexture(ctx.device, self.texture);
 			self.samplers.iter().rev().for_each(|sampler| SDL_ReleaseGPUSampler(ctx.device, *sampler));
+			SDL_ReleaseGPUGraphicsPipeline(ctx.device, self.pso_blend_light);
+			SDL_ReleaseGPUGraphicsPipeline(ctx.device, self.pso_blend_unlit);
 			SDL_ReleaseGPUGraphicsPipeline(ctx.device, self.pso_light);
 			SDL_ReleaseGPUGraphicsPipeline(ctx.device, self.pso_unlit);
 		}
@@ -303,7 +320,13 @@ impl AppImplementation for Lesson7
 		{
 			// Begin pass & bind pipeline state
 			let pass = SDL_BeginGPURenderPass(cmd, &color_info, 1, &depth_info);
-			SDL_BindGPUGraphicsPipeline(pass, if self.lighting { self.pso_light } else  { self.pso_unlit });
+			SDL_BindGPUGraphicsPipeline(pass, match (self.blending, self.lighting)
+			{
+				(false, false) => self.pso_unlit,
+				(false, true)  => self.pso_light,
+				(true,  false) => self.pso_blend_unlit,
+				(true,  true)  => self.pso_blend_light,
+			});
 
 			// Bind texture
 			let texture_binding = SDL_GPUTextureSamplerBinding
@@ -337,7 +360,8 @@ impl AppImplementation for Lesson7
 			{
 				#[allow(dead_code)]
 				struct Uniforms { model_view_proj: Mtx, color: [f32; 4] }
-				let u = Uniforms { model_view_proj: self.projection * model, color: [1.0; 4] };
+				let color = [1.0, 1.0, 1.0, 0.5];  // 50% translucency
+				let u = Uniforms { model_view_proj: self.projection * model, color };
 				SDL_PushGPUVertexUniformData(cmd, 0, addr_of!(u) as *const c_void, size_of::<Uniforms>() as u32);
 			}
 
@@ -369,6 +393,7 @@ impl AppImplementation for Lesson7
 		match key
 		{
 			SDLK_L if down => self.lighting = !self.lighting,
+			SDLK_B if down => self.blending = !self.blending,
 			SDLK_F if down => self.filter = (self.filter + 1) % self.samplers.len(),
 			_ => ()
 		}
@@ -377,6 +402,6 @@ impl AppImplementation for Lesson7
 
 pub fn main() -> Result<ExitCode, Box<dyn std::error::Error>>
 {
-	run::<Lesson7>()?;
+	run::<Lesson8>()?;
 	Ok(ExitCode::SUCCESS)
 }

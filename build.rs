@@ -42,6 +42,7 @@ pub fn main()
 	&[
 		"NeHe.bmp",
 		"Crate.bmp",
+		"Glass.bmp",
 	]);
 	copy_resources(&src_dir.join("shaders"), &dst_dir.join("Shaders"),
 	&[
