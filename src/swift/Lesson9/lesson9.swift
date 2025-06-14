@@ -8,6 +8,35 @@ import SDLSwift
 import NeHe
 import simd
 
+extension Lesson9.Star
+{
+	init(coeff: Float, random: inout NeHeRandom)
+	{
+		self.angle = 0.0
+		self.distance = 5.0 * coeff
+		self.color = Self.nextColor(random: &random)
+	}
+
+	mutating func update(coeff: Float, random: inout NeHeRandom)
+	{
+		self.angle += coeff
+		self.distance -= 0.01
+		if self.distance < 0.0
+		{
+			self.distance += 5.0
+			self.color = Self.nextColor(random: &random)
+		}
+	}
+
+	private static func nextColor(random: inout NeHeRandom) -> SIMD3<UInt8>
+	{
+		.init(
+			UInt8(truncatingIfNeeded: random.next() % 256),
+			UInt8(truncatingIfNeeded: random.next() % 256),
+			UInt8(truncatingIfNeeded: random.next() % 256))
+	}
+}
+
 struct Lesson9: AppDelegate
 {
 	struct Vertex
@@ -179,15 +208,7 @@ struct Lesson9: AppDelegate
 		self.instanceXferBuffer = instanceXferBuffer
 
 		// Initialise stars
-		self.stars = (0..<numStars).map
-		{ i in .init(
-				angle: 0.0,
-				distance: 5.0 * (Float(i) / Float(numStars)),
-				color: .init(
-					UInt8(truncatingIfNeeded: self.random.next() % 256),
-					UInt8(truncatingIfNeeded: self.random.next() % 256),
-					UInt8(truncatingIfNeeded: self.random.next() % 256)))
-		}
+		self.stars = (0..<numStars).map { i in .init(coeff: Float(i) / Float(numStars), random: &self.random) }
 	}
 
 	func quit(ctx: NeHeContext)
@@ -242,15 +263,7 @@ struct Lesson9: AppDelegate
 
 				// Update star
 				var newStar = star
-				newStar.angle += Float(starIDX) / Float(numStars)
-				newStar.distance -= 0.01
-				if newStar.distance < 0.0
-				{
-					newStar.distance += 5.0
-					newStar.color = SIMD3(newStar.color.indices.map { _ in
-						UInt8(truncatingIfNeeded: self.random.next() % 256)
-					})
-				}
+				newStar.update(coeff: Float(starIDX) / Float(numStars), random: &self.random)
 				self.stars[starIDX] = newStar
 			}
 		}
