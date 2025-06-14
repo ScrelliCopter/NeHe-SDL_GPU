@@ -1,0 +1,21 @@
+root = true
+
+[*.{c,h,py,rs,swift,metal,glsl,hlsl}]
+charset = utf-8
+max_line_length = 120
+indent_style = tab
+indent_size = tab
+tab_width = 4
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[{CMakeLists.txt,Cargo.toml}]
+charset = utf-8
+max_line_length = 120
+indent_style = tab
+indent_size = tab
+tab_width = 4
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
