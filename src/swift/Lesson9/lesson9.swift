@@ -219,12 +219,12 @@ struct Lesson9: AppDelegate
 			var instanceIDX = 0
 			for (starIDX, star) in self.stars.enumerated()
 			{
-				var model = matrix_float4x4.translation(.init(0.0, 0.0, zoom))
-				model.rotate(angle:        tilt, axis: .init(1.0, 0.0, 0.0))
+				var model = matrix_float4x4.translation(.init(0.0, 0.0, self.zoom))
+				model.rotate(angle:   self.tilt, axis: .init(1.0, 0.0, 0.0))
 				model.rotate(angle:  star.angle, axis: .init(0.0, 1.0, 0.0))
 				model.translate(.init(star.distance, 0.0, 0.0))
 				model.rotate(angle: -star.angle, axis: .init(0.0, 1.0, 0.0))
-				model.rotate(angle:       -tilt, axis: .init(1.0, 0.0, 0.0))
+				model.rotate(angle:  -self.tilt, axis: .init(1.0, 0.0, 0.0))
 
 				if self.twinkle
 				{
@@ -301,10 +301,10 @@ struct Lesson9: AppDelegate
 
 		let keys = SDL_GetKeyboardState(nil)!
 
-		if keys[Int(SDL_SCANCODE_UP.rawValue)]       { tilt -= 0.5 }
-		if keys[Int(SDL_SCANCODE_DOWN.rawValue)]     { tilt += 0.5 }
-		if keys[Int(SDL_SCANCODE_PAGEUP.rawValue)]   { zoom -= 0.2 }
-		if keys[Int(SDL_SCANCODE_PAGEDOWN.rawValue)] { zoom += 0.2 }
+		if keys[Int(SDL_SCANCODE_UP.rawValue)]       { self.tilt -= 0.5 }
+		if keys[Int(SDL_SCANCODE_DOWN.rawValue)]     { self.tilt += 0.5 }
+		if keys[Int(SDL_SCANCODE_PAGEUP.rawValue)]   { self.zoom -= 0.2 }
+		if keys[Int(SDL_SCANCODE_PAGEDOWN.rawValue)] { self.zoom += 0.2 }
 	}
 
 	mutating func key(ctx: inout NeHeContext, key: SDL_Keycode, down: Bool, repeat: Bool)
