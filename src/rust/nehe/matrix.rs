@@ -65,7 +65,7 @@ impl Mtx
 		Self::make_rotation(theta.cos(), theta.sin(), nx, ny, nz)
 	}
 
-	pub(crate) fn rotation(angle: f32, x: f32, y: f32, z: f32) -> Self
+	pub fn rotation(angle: f32, x: f32, y: f32, z: f32) -> Self
 	{
 		let r = Self::make_gl_rotation(angle, x, y, z);
 		Self::new(

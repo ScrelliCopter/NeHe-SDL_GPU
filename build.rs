@@ -44,6 +44,8 @@ pub fn main()
 		"Crate.bmp",
 		"Glass.bmp",
 		"Star.bmp",
+		"Mud.bmp",
+		"World.txt",
 	]);
 	copy_resources(&src_dir.join("shaders"), &dst_dir.join("Shaders"),
 	&[
