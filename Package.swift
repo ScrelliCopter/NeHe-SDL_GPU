@@ -14,6 +14,7 @@ let package = Package(
 		.executable(name: "Lesson7", targets: [ "Lesson7" ]),
 		.executable(name: "Lesson8", targets: [ "Lesson8" ]),
 		.executable(name: "Lesson9", targets: [ "Lesson9" ]),
+		.executable(name: "Lesson10", targets: [ "Lesson10" ]),
 	],
 	dependencies: [
 		.package(url: "https://github.com/GayPizzaSpecifications/SDL3Swift.git", branch: "main"),
@@ -46,5 +47,9 @@ let package = Package(
 		.executableTarget(name: "Lesson9", dependencies: [ "NeHe" ], path: "src/swift/Lesson9", resources: [
 			.process("../../../data/shaders/lesson9.metallib"),
 			.process("../../../data/Star.bmp") ]),
+		.executableTarget(name: "Lesson10", dependencies: [ "NeHe" ], path: "src/swift/Lesson10", resources: [
+			.process("../../../data/shaders/lesson6.metallib"),
+			.process("../../../data/Mud.bmp"),
+			.process("../../../data/World.txt") ]),
 	],
 )
