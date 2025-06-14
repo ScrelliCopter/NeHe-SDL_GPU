@@ -14,6 +14,10 @@ function (add_lesson target)
 	target_compile_definitions(${target} PRIVATE
 		$<$<C_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS>)
 	target_link_libraries(${target} SDL3::SDL3)
+	if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+		add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			$<TARGET_FILE:SDL3::SDL3> $<TARGET_FILE_DIR:${target}>)
+	endif()
 
 	target_sources(${target} PRIVATE ${arg_SOURCES})
 
