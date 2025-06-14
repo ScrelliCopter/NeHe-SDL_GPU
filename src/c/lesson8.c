@@ -70,7 +70,7 @@ static float projection[16];
 
 static bool lighting = false;
 static bool blending = false;
-struct Light { float ambient[4], diffuse[4], position[4]; } static light =
+static struct Light { float ambient[4], diffuse[4], position[4]; } light =
 {
 	.ambient  = { 0.5f, 0.5f, 0.5f, 1.0f },
 	.diffuse  = { 1.0f, 1.0f, 1.0f, 1.0f },
