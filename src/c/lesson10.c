@@ -221,7 +221,7 @@ static bool Lesson10_Init(NeHeContext* ctx)
 	{
 		.min_filter = SDL_GPU_FILTER_LINEAR,
 		.mag_filter = SDL_GPU_FILTER_LINEAR,
-		.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST,
+		.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR,
 		.max_lod = FLT_MAX
 	});
 	if (!samplers[0] || !samplers[1] || !samplers[2])
