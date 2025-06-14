@@ -143,7 +143,7 @@ impl AppImplementation for Lesson8
 
 	fn init(&mut self, ctx: &NeHeContext) -> Result<(), NeHeError>
 	{
-		let (vertex_shader_unlit, fragment_shader_unlit) = ctx.load_shaders("lesson6", 1, 0, 1)?;
+		let (vertex_shader_unlit, fragment_shader_unlit) = ctx.load_shaders("lesson8", 1, 0, 1)?;
 		let (vertex_shader_light, fragment_shader_light) = ctx.load_shaders("lesson7", 2, 0, 1)?;
 
 		const VERTEX_DESCRIPTIONS: &'static [SDL_GPUVertexBufferDescription] =

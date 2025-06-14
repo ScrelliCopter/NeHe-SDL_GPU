@@ -88,7 +88,7 @@ static bool Lesson8_Init(NeHeContext* restrict ctx)
 {
 	SDL_GPUShader* vertexShaderUnlit, * fragmentShaderUnlit;
 	SDL_GPUShader* vertexShaderLight, * fragmentShaderLight;
-	if (!NeHe_LoadShaders(ctx, &vertexShaderUnlit, &fragmentShaderUnlit, "lesson6",
+	if (!NeHe_LoadShaders(ctx, &vertexShaderUnlit, &fragmentShaderUnlit, "lesson8",
 		&(const NeHeShaderProgramCreateInfo){ .vertexUniforms = 1, .fragmentSamplers = 1 }))
 	{
 		return false;

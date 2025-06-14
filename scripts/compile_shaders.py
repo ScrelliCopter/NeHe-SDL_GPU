@@ -134,7 +134,7 @@ def compile_shaders() -> None:
 	build_metal = True
 	build_dxil = False
 	build_dxbc = False
-	lessons = [ "lesson2", "lesson3", "lesson6", "lesson7", "lesson9" ]
+	lessons = [ "lesson2", "lesson3", "lesson6", "lesson7", "lesson8", "lesson9" ]
 	src_dir = Path("src/shaders")
 	dest_dir = Path("data/shaders")
 

@@ -209,8 +209,6 @@ struct Lesson6: AppDelegate
 			vtxBindings.withUnsafeBufferPointer(\.baseAddress!), UInt32(vtxBindings.count))
 		SDL_BindGPUIndexBuffer(pass, &idxBinding, SDL_GPU_INDEXELEMENTSIZE_16BIT)
 
-		struct Uniforms { var modelViewProj: simd_float4x4, color: SIMD4<Float> }
-
 		// Move cube 5 units into the camera and apply some rotations
 		var model: simd_float4x4 = .translation(.init(0.0, 0.0, -5.0))
 		model.rotate(angle: rot.x, axis: .init(1.0, 0.0, 0.0))
@@ -218,10 +216,8 @@ struct Lesson6: AppDelegate
 		model.rotate(angle: rot.z, axis: .init(0.0, 0.0, 1.0))
 
 		// Push shader uniforms
-		var u = Uniforms(
-			modelViewProj: self.projection * model,
-			color: .init(repeating: 1.0))
-		SDL_PushGPUVertexUniformData(cmd, 0, &u, UInt32(MemoryLayout<Uniforms>.size))
+		var modelViewProj = self.projection * model
+		SDL_PushGPUVertexUniformData(cmd, 0, &modelViewProj, UInt32(MemoryLayout<matrix_float4x4>.size))
 
 		// Draw textured cube
 		SDL_DrawGPUIndexedPrimitives(pass, UInt32(Self.indices.count), 1, 0, 0, 0)

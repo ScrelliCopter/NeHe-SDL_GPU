@@ -90,7 +90,7 @@ struct Lesson8: AppDelegate
 
 	mutating func `init`(ctx: inout NeHeContext) throws(NeHeError)
 	{
-		let (vertexShaderUnlit, fragmentShaderUnlit) = try ctx.loadShaders(name: "lesson6",
+		let (vertexShaderUnlit, fragmentShaderUnlit) = try ctx.loadShaders(name: "lesson8",
 			vertexUniforms: 1, fragmentSamplers: 1)
 		defer
 		{

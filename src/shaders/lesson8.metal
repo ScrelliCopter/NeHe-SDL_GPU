@@ -15,12 +15,14 @@ struct VertexInput
 struct VertexUniform
 {
 	metal::float4x4 viewproj;
+	float4 color;
 };
 
 struct Vertex2Fragment
 {
 	float4 position [[position]];
 	float2 texcoord;
+	half4 color;
 };
 
 vertex Vertex2Fragment VertexMain(
@@ -30,6 +32,7 @@ vertex Vertex2Fragment VertexMain(
 	Vertex2Fragment out;
 	out.position = u.viewproj * float4(in.position, 1.0);
 	out.texcoord = in.texcoord;
+	out.color = half4(u.color);
 	return out;
 }
 
@@ -38,5 +41,5 @@ fragment half4 FragmentMain(
 	metal::texture2d<half, metal::access::sample> texture [[texture(0)]],
 	metal::sampler sampler [[sampler(0)]])
 {
-	return texture.sample(sampler, in.texcoord);
+	return in.color * texture.sample(sampler, in.texcoord);
 }

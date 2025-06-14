@@ -335,10 +335,8 @@ impl AppImplementation for Lesson7
 			}
 			else
 			{
-				#[allow(dead_code)]
-				struct Uniforms { model_view_proj: Mtx, color: [f32; 4] }
-				let u = Uniforms { model_view_proj: self.projection * model, color: [1.0; 4] };
-				SDL_PushGPUVertexUniformData(cmd, 0, addr_of!(u) as *const c_void, size_of::<Uniforms>() as u32);
+				let model_view_proj = self.projection * model;
+				SDL_PushGPUVertexUniformData(cmd, 0, addr_of!(model_view_proj) as *const c_void, size_of::<Mtx>() as u32);
 			}
 
 			// Draw the textured cube

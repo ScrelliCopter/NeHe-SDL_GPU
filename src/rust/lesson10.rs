@@ -330,10 +330,10 @@ impl AppImplementation for Lesson10
 			model_view.translate(-cam_x, -cam_y, -cam_z);
 
 			// Push shader uniforms
-			#[allow(dead_code)]
-			struct Uniforms { model_view_proj: Mtx, color: [f32; 4] }
-			let u = Uniforms { model_view_proj: self.projection * model_view, color: [1.0; 4] };
-			SDL_PushGPUVertexUniformData(cmd, 0, addr_of!(u) as *const c_void, size_of::<Uniforms>() as u32);
+			let model_view_proj = self.projection * model_view;
+			SDL_PushGPUVertexUniformData(cmd, 0,
+				addr_of!(model_view_proj) as *const c_void,
+				size_of::<Mtx>() as u32);
 
 			// Draw world
 			SDL_DrawGPUPrimitives(pass, self.world.vertices.len() as u32, 1, 0, 0);

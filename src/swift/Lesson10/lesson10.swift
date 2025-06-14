@@ -298,11 +298,8 @@ struct Lesson10: AppDelegate
 		modelView.translate(-camera.position)
 
 		// Push shader uniforms
-		struct Uniforms { var modelViewProj: simd_float4x4, color: SIMD4<Float> }
-		var u = Uniforms(
-			modelViewProj: self.projection * modelView,
-			color: .init(repeating: 1.0))
-		SDL_PushGPUVertexUniformData(cmd, 0, &u, UInt32(MemoryLayout<Uniforms>.size))
+		var modelViewProj = self.projection * modelView
+		SDL_PushGPUVertexUniformData(cmd, 0, &modelViewProj, UInt32(MemoryLayout<simd_float4x4>.size))
 
 		// Draw world
 		SDL_DrawGPUPrimitives(pass, UInt32(self.world.vertices.count), 1, 0, 0)

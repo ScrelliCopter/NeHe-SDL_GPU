@@ -266,11 +266,8 @@ struct Lesson7: AppDelegate
 		}
 		else
 		{
-			struct Uniforms { var modelViewProj: simd_float4x4, color: SIMD4<Float> }
-			var u = Uniforms(
-				modelViewProj: self.projection * model,
-				color: .init(repeating: 1.0))
-			SDL_PushGPUVertexUniformData(cmd, 0, &u, UInt32(MemoryLayout<Uniforms>.size))
+			var modelViewProj = self.projection * model
+			SDL_PushGPUVertexUniformData(cmd, 0, &modelViewProj, UInt32(MemoryLayout<simd_float4x4>.size))
 		}
 
 		// Draw textured cube

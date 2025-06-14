@@ -319,10 +319,9 @@ static void Lesson7_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restri
 	}
 	else
 	{
-		struct { float modelViewProj[16], color[4]; } u;
-		Mtx_Multiply(u.modelViewProj, projection, model);
-		SDL_memcpy(u.color, (const float[4]){ 1.0f, 1.0f, 1.0f, 1.0f }, sizeof(float) * 4);
-		SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(u));
+		float modelViewProj[16];
+		Mtx_Multiply(modelViewProj, projection, model);
+		SDL_PushGPUVertexUniformData(cmd, 0, &modelViewProj, sizeof(modelViewProj));
 	}
 
 	// Draw textured cube

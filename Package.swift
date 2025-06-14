@@ -41,8 +41,8 @@ let package = Package(
 			.process("../../../data/shaders/lesson7.metallib"),
 			.process("../../../data/Crate.bmp") ]),
 		.executableTarget(name: "Lesson8", dependencies: [ "NeHe" ], path: "src/swift/Lesson8", resources: [
-			.process("../../../data/shaders/lesson6.metallib"),
 			.process("../../../data/shaders/lesson7.metallib"),
+			.process("../../../data/shaders/lesson8.metallib"),
 			.process("../../../data/Glass.bmp") ]),
 		.executableTarget(name: "Lesson9", dependencies: [ "NeHe" ], path: "src/swift/Lesson9", resources: [
 			.process("../../../data/shaders/lesson9.metallib"),

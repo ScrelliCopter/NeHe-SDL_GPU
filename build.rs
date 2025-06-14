@@ -53,6 +53,7 @@ pub fn main()
 		"lesson3.metallib",
 		"lesson6.metallib",
 		"lesson7.metallib",
+		"lesson8.metallib",
 		"lesson9.metallib",
 	]);
 }

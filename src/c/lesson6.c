@@ -229,8 +229,7 @@ static void Lesson6_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restri
 		.offset = 0
 	}, SDL_GPU_INDEXELEMENTSIZE_16BIT);
 
-	float model[16];
-	struct { float modelViewProj[16], color[4]; } u;
+	float model[16], modelViewProj[16];
 
 	// Move cube 5 units into the screen and apply some rotations
 	Mtx_Translation(model, 0.0f, 0.0f, -5.0f);
@@ -239,9 +238,8 @@ static void Lesson6_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restri
 	Mtx_Rotate(model, zRot, 0.0f, 0.0f, 1.0f);
 
 	// Push shader uniforms
-	Mtx_Multiply(u.modelViewProj, projection, model);
-	SDL_memcpy(u.color, (float[4]){ 1.0f, 1.0f, 1.0f, 1.0f }, sizeof(float) * 4);
-	SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(u));
+	Mtx_Multiply(modelViewProj, projection, model);
+	SDL_PushGPUVertexUniformData(cmd, 0, &modelViewProj, sizeof(modelViewProj));
 
 	// Draw textured cube
 	SDL_DrawGPUIndexedPrimitives(pass, SDL_arraysize(indices), 1, 0, 0, 0);

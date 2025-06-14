@@ -307,10 +307,9 @@ static void Lesson10_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	Mtx_Translate(modelView, -camera.x, -(0.25f + camera.walkBob), -camera.z);
 
 	// Push shader uniforms
-	struct { float modelViewProj[16], color[4]; } u;
-	Mtx_Multiply(u.modelViewProj, projection, modelView);
-	SDL_memcpy(u.color, (float[4]){ 1.0f, 1.0f, 1.0f, 1.0f }, sizeof(float) * 4);
-	SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(u));
+	float modelViewProj[16];
+	Mtx_Multiply(modelViewProj, projection, modelView);
+	SDL_PushGPUVertexUniformData(cmd, 0, &modelViewProj, sizeof(modelViewProj));
 
 	// Draw world
 	SDL_DrawGPUPrimitives(pass, 3u * (uint32_t)world.numTriangles, 1, 0, 0);
