@@ -43,6 +43,7 @@ pub fn main()
 		"NeHe.bmp",
 		"Crate.bmp",
 		"Glass.bmp",
+		"Star.bmp",
 	]);
 	copy_resources(&src_dir.join("shaders"), &dst_dir.join("Shaders"),
 	&[
@@ -50,5 +51,6 @@ pub fn main()
 		"lesson3.metallib",
 		"lesson6.metallib",
 		"lesson7.metallib",
+		"lesson9.metallib",
 	]);
 }
