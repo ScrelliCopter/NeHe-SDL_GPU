@@ -67,7 +67,7 @@ impl NeHeCopyPass<'_>
 		{
 			let mut path = CString::from(CStr::from_ptr(SDL_GetBasePath())).into_bytes();
 			path.extend_from_slice(resource_path.as_bytes());
-			CString::from_vec_with_nul_unchecked(path)
+			CString::from_vec_unchecked(path)
 		};
 
 		// Load image into a surface
