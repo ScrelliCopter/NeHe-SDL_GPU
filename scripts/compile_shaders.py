@@ -211,7 +211,7 @@ def compile_dxbc_shader(shader: Shader, type: str, flags: list[str] | None = Non
 
 
 def compile_shaders() -> None:
-	build_spirv = False
+	build_spirv = True
 	build_metal = True
 	build_dxil = False
 	build_dxbc = False
