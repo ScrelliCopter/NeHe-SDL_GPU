@@ -389,20 +389,22 @@ bool NeHe_LoadShaders(NeHeContext* restrict ctx,
 {
 	SDL_GPUShader *vtxShader = NULL, *frgShader = NULL;
 
-	// Build path to shader: "{base}/Shaders/{name}.{ext}"
+	// Build path to shader: "{base}/Data/Shaders/{name}.{ext}"
 	const char* resources = SDL_GetBasePath();  // Resources directory
 	const size_t resourcesLen = SDL_strlen(resources);
 	const size_t nameLen = SDL_strlen(name);
-	const size_t basenameLen = resourcesLen + 8 + nameLen;
+	const size_t basenameLen = resourcesLen + 13 + nameLen;
 	char* path = SDL_malloc(basenameLen + 10);
 	if (!path)
 	{
 		return false;
 	}
 	SDL_memcpy(path, resources, resourcesLen);
-	SDL_memcpy(&path[resourcesLen], "Shaders", 7);
-	path[resourcesLen + 7] = resources[resourcesLen - 1];  // Copy path separator
-	SDL_memcpy(&path[resourcesLen + 8], name, nameLen);
+	SDL_memcpy(&path[resourcesLen], "Data", 4);
+	path[resourcesLen + 4] = resources[resourcesLen - 1];  // Copy path separator
+	SDL_memcpy(&path[resourcesLen + 5], "Shaders", 7);
+	path[resourcesLen + 12] = resources[resourcesLen - 1];  // Copy path separator
+	SDL_memcpy(&path[resourcesLen + 13], name, nameLen);
 
 	const SDL_GPUShaderFormat availableFormats = SDL_GetGPUShaderFormats(ctx->device);
 	if (availableFormats & (SDL_GPU_SHADERFORMAT_METALLIB | SDL_GPU_SHADERFORMAT_MSL))

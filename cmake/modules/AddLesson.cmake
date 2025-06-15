@@ -29,7 +29,7 @@ function (add_lesson target)
 		endif()
 		set_source_files_properties(${path} PROPERTIES
 			HEADER_FILE_ONLY ON
-			MACOSX_PACKAGE_LOCATION "Resources/Shaders")
+			MACOSX_PACKAGE_LOCATION "Resources/Data/Shaders")
 		target_sources(${target} PRIVATE "${path}")
 	endforeach()
 	foreach (resource IN LISTS arg_DATA)
