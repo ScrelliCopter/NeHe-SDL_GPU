@@ -60,10 +60,10 @@ def compile_metal_shaders(
 			cwd.joinpath(obj).unlink()
 
 
-Shader = namedtuple("Shader", ["source", "type", "output"])
+Shader = namedtuple("Shader", ["source", "output"])
 
 
-def shaders_suffixes(shaders: list[Shader],
+def shaders_suffixes(shaders: Iterable[Shader],
 		in_suffix: str | None, out_suffix: str | None) -> Iterable[Shader]:
 	"""Add file extensions to the source and outputs of a list of shaders
 
@@ -75,15 +75,54 @@ def shaders_suffixes(shaders: list[Shader],
 	for s in shaders:
 		yield Shader(
 			f"{s.source}.{in_suffix}" if in_suffix else s.source,
-			s.type,
 			f"{s.output}.{out_suffix}" if out_suffix else s.output)
 
 
-def compile_spirv_shaders(shaders: Iterable[Shader],
-		flags: list[str] = None, glslang: str | None=None, cwd: Path | None = None) -> None:
-	"""Compile shaders to SPIR-V using glslang
+def shader_prepend_ext(shader: Shader, prep_ext: str) -> Shader:
+	"""Prepend `prep_ext` to the shader's output path's extension
+
+	:param shader:   Shader to modify
+	:param prep_ext: Extension to prepend (without the dot)
+	:return:         The modified shader
+	"""
+	out = Path(shader.output)
+	return Shader(shader.source, out.with_suffix(f".{prep_ext}{out.suffix}"))
+
+
+def compile_spirv_shaders(shaders: Iterable[Shader], suffix: str = "spv",
+		glslang: str | None = None, dxc: str | None = None, cwd: Path | None = None) -> None:
+	"""Compile shaders to SPIR-V using glslang for GLSL shaders and DXC for HLSL shaders
+
+	If a GLSL version exists it will be built with glslang,
+	else building HLSL with DXC will be attempted.
 
 	:param shaders: The list of shader source paths to compile
+	:param glslang: Optional path to glslang executable, if `None` defaults to "glslang"
+	:param dxc:     Optional path to dxc excutable, if `None` defaults to "dxc"
+	:param cwd:     Optionally set the current working directory for the compiler
+	"""
+	for glsl, hlsl in zip(
+			shaders_suffixes(shaders, "glsl", suffix),
+			shaders_suffixes(shaders, "hlsl", suffix)):
+		if cwd.joinpath(glsl.source).exists():
+			flags = ["--quiet"]
+			compile_glsl_spirv_shader(shader_prepend_ext(glsl, "vtx"), "vert",
+				flags=[*flags, "-DVERTEX"], glslang=glslang, cwd=cwd)
+			compile_glsl_spirv_shader(shader_prepend_ext(glsl, "frg"), "frag",
+				flags=flags, glslang=glslang, cwd=cwd)
+		else:
+			compile_hlsl_spirv_shader(shader_prepend_ext(hlsl, "vtx"), "vert",
+				flags=["-DVULKAN", "-DVERTEX"], dxc=dxc, cwd=cwd)
+			compile_hlsl_spirv_shader(shader_prepend_ext(hlsl, "frg"), "frag",
+				flags=["-DVULKAN"], dxc=dxc, cwd=cwd)
+
+
+def compile_glsl_spirv_shader(shader: Shader, type: str, flags: list[str] = None,
+		glslang: str | None = None, cwd: Path | None = None) -> None:
+	"""Compile GLSL shaders to SPIR-V using glslang
+
+	:param shader:  The shaders to compile
+	:param type:    Type of shader to compile
 	:param flags:   List of additional flags to pass to glslang
 	:param glslang: Optional path to glslang executable, if `None` defaults to "glslang"
 	:param cwd:     Optionally set the current working directory for the compiler
@@ -92,41 +131,83 @@ def compile_spirv_shaders(shaders: Iterable[Shader],
 		glslang = "glslang"
 	if flags is None:
 		flags = []
-
-	for shader in shaders:
-		sflags = [*flags, "-V", "-S", shader.type, "-o", shader.output, shader.source]
-		subprocess.run([glslang, *sflags], cwd=cwd, check=True)
+	flags += ["-V", "-S", type, "-o", shader.output, shader.source]
+	subprocess.run([glslang, *flags], cwd=cwd, check=True)
 
 
-def compile_dxil_shaders(shaders: Iterable[Shader], dxc: str | None = None, cwd: Path | None = None) -> None:
-	"""Compile HLSL shaders to DXIL using DXC
+def compile_hlsl_spirv_shader(shader: Shader, type: str, flags: list[str] = None,
+		dxc: str | None = None, cwd: Path | None = None) -> None:
+	"""Compile HLSL shaders to SPIR-V using DXC
 
-	:param shaders: The list of shader source paths to compile
-	:param dxc:     Optional path to dxc excutable, if `None` defaults to "dxc"
-	:param cwd:     Optionally set the current working directory for the compiler
+	:param shader: The shaders to compile
+	:param type:   Type of shader to compile
+	:param flags:   List of additional flags to pass to DXC
+	:param dxc:    Optional path to dxc excutable, if `None` defaults to "dxc"
+	:param cwd:    Optionally set the current working directory for the compiler
 	"""
 	if dxc is None:
 		dxc = "dxc"
-	for shader in shaders:
-		entry, shader_type = {
-			"vert": ("VertexMain", "vs_6_0"),
-			"frag": ("PixelMain", "ps_6_0") }[shader.type]
-		cflags = ["-E", entry, "-T", shader_type]
-		subprocess.run([dxc, *cflags, "-Fo", shader.output, shader.source], cwd=cwd, check=True)
+	if flags is None:
+		flags = []
+	entry, shader_type = {
+		"vert": ("VertexMain", "vs_6_0"),
+		"frag": ("FragmentMain", "ps_6_0") }[type]
+	cflags = ["-spirv", *flags, "-E", entry, "-T", shader_type]
+	subprocess.run([dxc, *cflags, "-Fo", shader.output, shader.source], cwd=cwd, check=True)
 
 
-def compile_dxbc_shaders(shaders: Iterable[Shader], cwd: Path | None = None) -> None:
-	"""Compile HLSL shaders to DXBC using FXC
+def compile_d3d12_shaders(shaders: Iterable[Shader], build_dxbc: bool = False,
+		dxc: str | None = None, cwd: Path | None = None) -> None:
+	for shader in shaders_suffixes(shaders, "hlsl", "dxb"):
+		compile_dxil_shader(shader_prepend_ext(shader, "vtx"), "vert",
+			flags=["-DD3D12", "-DVERTEX"], dxc=dxc, cwd=cwd)
+		compile_dxil_shader(shader_prepend_ext(shader, "pxl"), "frag",
+			flags=["-DD3D12"], dxc=dxc, cwd=cwd)
+	if build_dxbc:  # FXC is only available thru the Windows SDK
+		for shader in shaders_suffixes(shaders, "hlsl", "fxb"):
+			compile_dxbc_shader(shader_prepend_ext(shader, "vtx"), "vert",
+				flags=["/DD3D12", "/DVERTEX"], cwd=cwd)
+			compile_dxbc_shader(shader_prepend_ext(shader, "pxl"), "frag",
+				flags=["/DD3D12"], cwd=cwd)
 
-	:param shaders: The list of shader source paths to compile
-	:param cwd:     Optionally set the current working directory for the compiler
+
+def compile_dxil_shader(shader: Shader, type: str, flags: list[str] | None = None,
+		dxc: str | None = None, cwd: Path | None = None) -> None:
+	"""Compile an HLSL shaders to DXIL using DXC
+
+	:param shader: Path to the shader source to compile
+	:param type:   Type of shader to compile
+	:param flags:  Optional list of flags to pass to DXC
+	:param dxc:    Optional path to dxc excutable, if `None` defaults to "dxc"
+	:param cwd:    Optionally set the current working directory for the compiler
 	"""
-	for shader in shaders:
-		entry, shader_type = {
-			"vert": ("VertexMain", "vs_5_1"),
-			"frag": ("PixelMain", "ps_5_1") }[shader.type]
-		cflags = ["/E", entry, "/T", shader_type]
-		subprocess.run(["fxc", *cflags, "/Fo", shader.output, shader.source], cwd=cwd, check=True)
+	if flags is None:
+		flags = []
+	if dxc is None:
+		dxc = "dxc"
+	entry, shader_type = {
+		"vert": ("VertexMain", "vs_6_0"),
+		"frag": ("PixelMain", "ps_6_0") }[type]
+	cflags = [*flags, "-E", entry, "-T", shader_type]
+	subprocess.run([dxc, *cflags, "-Fo", shader.output, shader.source], cwd=cwd, check=True)
+
+
+def compile_dxbc_shader(shader: Shader, type: str, flags: list[str] | None = None,
+		cwd: Path | None = None) -> None:
+	"""Compile an HLSL shader to DXBC using FXC
+
+	:param shader: Path to the shader source to compile
+	:param type:   Type of shader to compile
+	:param flags:  Optional list of flags to pass to FXC
+	:param cwd:    Optionally set the current working directory for the compiler
+	"""
+	if flags is None:
+		flags = []
+	entry, shader_type = {
+		"vert": ("VertexMain", "vs_5_1"),
+		"frag": ("PixelMain", "ps_5_1") }[type]
+	cflags = [*flags, "/E", entry, "/T", shader_type]
+	subprocess.run(["fxc", *cflags, "/Fo", shader.output, shader.source], cwd=cwd, check=True)
 
 
 def compile_shaders() -> None:
@@ -139,11 +220,7 @@ def compile_shaders() -> None:
 	dest_dir = Path("data/shaders")
 
 	system = platform.system()
-	def add_shaders() -> Iterable[Shader]:
-		for lesson in lessons:
-			yield Shader(src_dir / f"{lesson}.vertex", "vert", dest_dir / f"{lesson}.vertex")
-			yield Shader(src_dir / f"{lesson}.fragment", "frag", dest_dir / f"{lesson}.fragment")
-	shaders = list(add_shaders())
+	shaders = [Shader(src_dir / lesson, dest_dir / lesson) for lesson in lessons]
 
 	root = Path(sys.argv[0]).resolve().parent.parent
 	root.joinpath(dest_dir).mkdir(parents=True, exist_ok=True)
@@ -154,8 +231,7 @@ def compile_shaders() -> None:
 
 	if build_spirv:
 		# Build SPIR-V shaders for Vulkan
-		compile_spirv_shaders(shaders_suffixes(shaders, "glsl", "spv"),
-			flags=["--quiet"], glslang=glslang, cwd=root)
+		compile_spirv_shaders(shaders, glslang=glslang, dxc=dxc, cwd=root)
 
 	if build_metal:
 		# Build Metal shaders on macOS
@@ -163,23 +239,20 @@ def compile_shaders() -> None:
 			compile_platform = "macos"
 			sdk_platform = "macosx"
 			min_version = "10.11"
-			for lesson in lessons:
+			for shader in shaders_suffixes(shaders, "metal", "metallib"):
 				compile_metal_shaders(
-					sources=[src_dir / f"{lesson}.metal"],
-					library=dest_dir / f"{lesson}.metallib",
+					sources=[shader.source],
+					library=shader.output,
 					cflags=["-Wall", "-O3",
 						f"-std={compile_platform}-metal1.1",
 						f"-m{sdk_platform}-version-min={min_version}"],
 					sdk=sdk_platform,
 					cwd=root)
 
-	if build_dxil:
-		# Build HLSL shaders on Windows or when DXC is available
-		if system == "Windows" or dxc is not None:
-			compile_dxil_shaders(shaders_suffixes(shaders, "hlsl", "dxb"), dxc=dxc, cwd=root)
-	if build_dxbc:
-		if system == "Windows":  # FXC is only available thru the Windows SDK
-			compile_dxbc_shaders(shaders_suffixes(shaders, "hlsl", "fxb"), cwd=root)
+	# Build HLSL shaders on Windows or when DXC is available
+	is_windows = system == "Windows"
+	if (build_dxil or (is_windows and build_dxbc)) and (is_windows or dxc is not None):
+		compile_d3d12_shaders(shaders, build_dxbc=build_dxbc and is_windows, dxc=dxc, cwd=root)
 
 
 if __name__ == "__main__":
