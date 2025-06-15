@@ -52,7 +52,7 @@ struct Lesson9: AppDelegate
 
 	struct Instance
 	{
-		let model: matrix_float4x4
+		let model: simd_float4x4
 		let color: SIMD4<Float>
 	}
 
@@ -85,7 +85,7 @@ struct Lesson9: AppDelegate
 	var sampler: OpaquePointer? = nil
 	var texture: OpaquePointer? = nil
 
-	var projection: matrix_float4x4 = .init(1.0)
+	var projection: simd_float4x4 = .init(1.0)
 
 	var twinkle = false
 	var stars: [Star] = []
@@ -240,7 +240,7 @@ struct Lesson9: AppDelegate
 			var instanceIDX = 0
 			for (starIDX, star) in self.stars.enumerated()
 			{
-				var model = matrix_float4x4.translation(.init(0.0, 0.0, self.zoom))
+				var model = simd_float4x4.translation(.init(0.0, 0.0, self.zoom))
 				model.rotate(angle:   self.tilt, axis: .init(1.0, 0.0, 0.0))
 				model.rotate(angle:  star.angle, axis: .init(0.0, 1.0, 0.0))
 				model.translate(.init(star.distance, 0.0, 0.0))
@@ -305,7 +305,7 @@ struct Lesson9: AppDelegate
 		SDL_BindGPUVertexStorageBuffers(renderPass, 0, &self.instanceBuffer, 1)
 
 		// Push shader uniforms
-		SDL_PushGPUVertexUniformData(cmd, 0, &self.projection, UInt32(MemoryLayout<matrix_float4x4>.size))
+		SDL_PushGPUVertexUniformData(cmd, 0, &self.projection, UInt32(MemoryLayout<simd_float4x4>.size))
 
 		// Draw star instances
 		SDL_DrawGPUIndexedPrimitives(renderPass, UInt32(Self.indices.count), UInt32(numInstances), 0, 0, 0)

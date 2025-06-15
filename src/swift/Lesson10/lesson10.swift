@@ -119,7 +119,7 @@ struct Lesson10: AppDelegate
 	var samplers = [OpaquePointer?](repeating: nil, count: 3)
 	var texture: OpaquePointer? = nil
 
-	var projection: matrix_float4x4 = .init(1.0)
+	var projection: simd_float4x4 = .init(1.0)
 
 	var blending = false
 	var filter = 0

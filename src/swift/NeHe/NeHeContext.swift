@@ -135,9 +135,9 @@ public extension NeHeContext
 			info.format = SDL_GPU_SHADERFORMAT_SPIRV
 			return (
 				try loadShader(bundle.url(forResource: name, withExtension: "vtx.spv"),
-					info, SDL_GPU_SHADERSTAGE_VERTEX, "main"),
+					info, SDL_GPU_SHADERSTAGE_VERTEX, "VertexMain"),
 				try loadShader(bundle.url(forResource: name, withExtension: "frg.spv"),
-					info, SDL_GPU_SHADERSTAGE_FRAGMENT, "main"))
+					info, SDL_GPU_SHADERSTAGE_FRAGMENT, "FragmentMain"))
 		}
 		else if availableFormats & SDL_GPU_SHADERFORMAT_DXIL == SDL_GPU_SHADERFORMAT_DXIL
 		{

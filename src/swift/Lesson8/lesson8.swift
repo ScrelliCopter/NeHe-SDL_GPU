@@ -72,7 +72,7 @@ struct Lesson8: AppDelegate
 	var idxBuffer: OpaquePointer? = nil
 	var samplers = [OpaquePointer?](repeating: nil, count: 3)
 	var texture: OpaquePointer? = nil
-	var projection: matrix_float4x4 = .init(1.0)
+	var projection: simd_float4x4 = .init(1.0)
 
 	struct Light { let ambient: SIMD4<Float>, diffuse: SIMD4<Float>, position: SIMD4<Float> }
 

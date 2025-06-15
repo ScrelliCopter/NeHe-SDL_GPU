@@ -70,7 +70,7 @@ struct Lesson6: AppDelegate
 	var idxBuffer: OpaquePointer? = nil
 	var sampler: OpaquePointer? = nil
 	var texture: OpaquePointer? = nil
-	var projection: matrix_float4x4 = .init(1.0)
+	var projection: simd_float4x4 = .init(1.0)
 
 	var rot: SIMD3<Float> = .init(repeating: 0.0)
 
@@ -217,7 +217,7 @@ struct Lesson6: AppDelegate
 
 		// Push shader uniforms
 		var modelViewProj = self.projection * model
-		SDL_PushGPUVertexUniformData(cmd, 0, &modelViewProj, UInt32(MemoryLayout<matrix_float4x4>.size))
+		SDL_PushGPUVertexUniformData(cmd, 0, &modelViewProj, UInt32(MemoryLayout<simd_float4x4>.size))
 
 		// Draw textured cube
 		SDL_DrawGPUIndexedPrimitives(pass, UInt32(Self.indices.count), 1, 0, 0, 0)
