@@ -18,7 +18,7 @@ pub fn get_target_dir() -> PathBuf
 	Path::new(&manifest_dir).join("target").join(build_type)
 }
 
-pub fn copy_resources<const N: usize>(src_dir: &PathBuf, dst_dir: &PathBuf, resources: &[&str; N])
+pub fn copy_resources<S: AsRef<str>>(src_dir: &PathBuf, dst_dir: &PathBuf, resources: Vec<S>)
 {
 	if !dst_dir.is_dir()
 	{
@@ -26,8 +26,24 @@ pub fn copy_resources<const N: usize>(src_dir: &PathBuf, dst_dir: &PathBuf, reso
 	}
 	for resource in resources
 	{
-		std::fs::copy(&src_dir.join(resource), &dst_dir.join(resource)).unwrap();
+		std::fs::copy(&src_dir.join(resource.as_ref()), &dst_dir.join(resource.as_ref())).unwrap();
 	}
+}
+
+pub fn copy_shaders<const N: usize>(src_dir: &PathBuf, dst_dir: &PathBuf, shaders: &[&str; N])
+{
+	let resources = shaders.into_iter().flat_map(|name|
+	{
+		if cfg!(target_os="macos")
+		{
+			vec![format!("{name}.metallib")]
+		}
+		else
+		{
+			vec![format!("{name}.vtx.spv"), format!("{name}.frg.spv")]
+		}
+	}).collect();
+	copy_resources(src_dir, dst_dir, resources);
 }
 
 pub fn main()
@@ -35,11 +51,14 @@ pub fn main()
 	#[cfg(target_os="macos")]
 	println!("cargo:rustc-link-arg=-Wl,-rpath,/Library/Frameworks");
 
+	#[cfg(target_os="linux")]
+	println!("cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN");
+
 	let src_dir = std::env::current_dir().unwrap().join("data");
 	let dst_dir = get_target_dir().join("Data");
 
 	copy_resources(&src_dir, &dst_dir,
-	&[
+	vec![
 		"NeHe.bmp",
 		"Crate.bmp",
 		"Glass.bmp",
@@ -47,13 +66,13 @@ pub fn main()
 		"Mud.bmp",
 		"World.txt",
 	]);
-	copy_resources(&src_dir.join("shaders"), &dst_dir.join("Shaders"),
+	copy_shaders(&src_dir.join("shaders"), &dst_dir.join("Shaders"),
 	&[
-		"lesson2.metallib",
-		"lesson3.metallib",
-		"lesson6.metallib",
-		"lesson7.metallib",
-		"lesson8.metallib",
-		"lesson9.metallib",
+		"lesson2",
+		"lesson3",
+		"lesson6",
+		"lesson7",
+		"lesson8",
+		"lesson9",
 	]);
 }

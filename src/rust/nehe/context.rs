@@ -178,8 +178,8 @@ impl NeHeContext
 		{
 			info.format = SDL_GPU_SHADERFORMAT_SPIRV;
 			Ok((
-				self.load_shader(path.appending_ext("vtx.spv"), &info, SDL_GPU_SHADERSTAGE_VERTEX, "main")?,
-				self.load_shader(path.appending_ext("frg.spv"), &info, SDL_GPU_SHADERSTAGE_FRAGMENT, "main")?
+				self.load_shader(path.appending_ext("vtx.spv"), &info, SDL_GPU_SHADERSTAGE_VERTEX, "VertexMain")?,
+				self.load_shader(path.appending_ext("frg.spv"), &info, SDL_GPU_SHADERSTAGE_FRAGMENT, "FragmentMain")?
 			))
 		}
 		else if available_formats & SDL_GPU_SHADERFORMAT_DXIL == SDL_GPU_SHADERFORMAT_DXIL

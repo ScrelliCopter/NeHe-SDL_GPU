@@ -3,7 +3,14 @@ name = "NeHe-SDL_GPU"
 edition = "2024"
 
 [dependencies]
-sdl3-sys = { version = "0.5.1", features = [ "link-framework" ] }
+sdl3-sys = "0.5.2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+sdl3-sys = { version = "0.5.2", features = [ "link-framework" ] }
+
+[target.'cfg(windows)'.dependencies]
+sdl3-sys = { version = "0.5.2", features = [ "build-from-source" ] }
+sdl3-src = { version = "3.1.10-prerelease-0" }
 
 [lib]
 name = "nehe"
