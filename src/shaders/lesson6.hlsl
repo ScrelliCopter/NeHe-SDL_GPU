@@ -31,7 +31,11 @@ Vertex2Pixel VertexMain(VertexInput input)
 Texture2D<half4> Texture : register(t0, space2);
 SamplerState Sampler : register(s0, space2);
 
+#ifdef VULKAN
+half4 FragmentMain(Vertex2Pixel input) : SV_Target0
+#else
 half4 PixelMain(Vertex2Pixel input) : SV_Target0
+#endif
 {
 	return Texture.Sample(Sampler, input.texcoord);
 }

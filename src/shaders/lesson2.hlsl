@@ -25,7 +25,11 @@ Vertex2Pixel VertexMain(VertexInput input)
 	return output;
 }
 
+#ifdef VULKAN
+half4 FragmentMain(Vertex2Pixel input) : SV_Target0
+#else
 half4 PixelMain(Vertex2Pixel input) : SV_Target0
+#endif
 {
 	return half4(1.0, 1.0, 1.0, 1.0);
 }

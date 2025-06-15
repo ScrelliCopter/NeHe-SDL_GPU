@@ -435,9 +435,9 @@ bool NeHe_LoadShaders(NeHeContext* restrict ctx,
 	{
 		const SDL_GPUShaderFormat format = SDL_GPU_SHADERFORMAT_SPIRV;
 		SDL_memcpy(&path[basenameLen], ".vtx.spv", 9);
-		vtxShader = LoadShader(ctx, path, info, format, SDL_GPU_SHADERSTAGE_VERTEX, "main");
+		vtxShader = LoadShader(ctx, path, info, format, SDL_GPU_SHADERSTAGE_VERTEX, "VertexMain");
 		SDL_memcpy(&path[basenameLen], ".frg.spv", 9);
-		frgShader = LoadShader(ctx, path, info, format, SDL_GPU_SHADERSTAGE_FRAGMENT, "main");
+		frgShader = LoadShader(ctx, path, info, format, SDL_GPU_SHADERSTAGE_FRAGMENT, "FragmentMain");
 	}
 	else if (availableFormats & SDL_GPU_SHADERFORMAT_DXIL)  // Direct3D 12 Shader Model 6.0
 	{
