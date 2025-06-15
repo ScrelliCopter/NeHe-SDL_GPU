@@ -32,8 +32,9 @@ bool NeHe_InitGPU(NeHeContext* ctx, const char* title, int width, int height)
 
 	// Open GPU device
 	const SDL_GPUShaderFormat formats =
+		// FIXME: Re-enable D3D12 later when lesson9 works properly
 		SDL_GPU_SHADERFORMAT_METALLIB | SDL_GPU_SHADERFORMAT_MSL |
-		SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL;
+		SDL_GPU_SHADERFORMAT_SPIRV /* | SDL_GPU_SHADERFORMAT_DXIL */;
 	ctx->device = SDL_CreateGPUDevice(formats, true, NULL);
 	if (!ctx->device)
 	{

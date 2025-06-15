@@ -37,13 +37,13 @@ function (add_lesson target)
 			target_sources(${target} PRIVATE "${path}")
 			unset(path)
 		else()
-			if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-				# Copy D3D12 (DXIL) shaders into target shaders folder
-				add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different
-					"${CMAKE_SOURCE_DIR}/data/shaders/${shader}.vtx.dxb"
-					"${CMAKE_SOURCE_DIR}/data/shaders/${shader}.pxl.dxb"
-					"$<TARGET_FILE_DIR:${target}>/Data/Shaders")
-			endif()
+			#if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+			#	# Copy D3D12 (DXIL) shaders into target shaders folder
+			#	add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different
+			#		"${CMAKE_SOURCE_DIR}/data/shaders/${shader}.vtx.dxb"
+			#		"${CMAKE_SOURCE_DIR}/data/shaders/${shader}.pxl.dxb"
+			#		"$<TARGET_FILE_DIR:${target}>/Data/Shaders")
+			#endif()
 			# Copy Vulkan (SPIR-V) shaders into target shaders folder
 			add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different
 				"${CMAKE_SOURCE_DIR}/data/shaders/${shader}.vtx.spv"
