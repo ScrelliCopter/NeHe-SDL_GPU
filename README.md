@@ -32,6 +32,14 @@ We have already been using a tiny matrix maths library in place of legacy GL's
 Like the original, we modify our shapes to fully bring them into the 3rd
 dimension, turning our triangle into a pyramid and our quad into a cube.
 
+This is also the point we need to add depth testing. In OpenGL this simply
+requires enabling the `GL_DEPTH_TEST` capability and passing the
+`GL_DEPTH_BUFFER_BIT` flag to `glClear`, however, modern APIs require depth
+buffer(s) to be manually created and managed by the client application.
+SDL_GPU thankfully handles resource cycling for us but depth texture management
+boilerplate is long & repetitive enough to justify being factored out into the
+utility library.
+
 ## Lessons [06 - 10](https://nehe.gamedev.net/tutorial/lessons_06__10/17010/) ##
 
 ### Lesson 06: [Texture Mapping](https://nehe.gamedev.net/tutorial/texture_mapping/12038/) ###
@@ -73,5 +81,21 @@ with `layer_count_or_depth` set to $floor(\log_2\max(width,height))+1$ to
 replicate OpenGL's behaviour.
 
 ### Lesson 08: [Blending](https://nehe.gamedev.net/tutorial/blending/16001/) ###
+This lesson demonstrates use of additive blending on the previous lesson's
+cube.
+
+The original lesson simply toggles the `GL_BLEND` capability to enable and
+disable blending. Since we are re-using the lighting setup; we'll need four
+pipelines: the existing lit & unlit shader programs, and lit & unlit pipelines
+with depth testing disable and blending enabled; to cover all possible toggle
+states.
+
+The original uses `glColor4f(1, 1, 1, 0.5)` to halve the opacity when blending
+is toggled on, so we extend Lesson 06's basic textured shader to add a colour
+tinting uniform. Note that OpenGL does not apply per-vertex colour to lit faces
+without `GL_COLOR_MATERIAL` explicitly enabled, and the original takes
+advantage of this to only reduce opacity in the unlit blended case; ergo we
+don't need a tint uniform in the light shader.
+
 ### Lesson 09: [Animated Scenes With Blended Textures](https://nehe.gamedev.net/tutorial/moving_bitmaps_in_3d_space/17001/) ###
 ### Lesson 10: [Loading And Moving Through A 3D World](https://nehe.gamedev.net/tutorial/loading_and_moving_through_a_3d_world/22003/) ###
