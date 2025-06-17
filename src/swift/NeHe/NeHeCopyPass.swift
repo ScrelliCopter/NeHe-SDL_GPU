@@ -194,7 +194,7 @@ public extension NeHeCopyPass
 		if genMipmaps
 		{
 			info.usage |= SDL_GPU_TEXTUREUSAGE_COLOR_TARGET
-			// floor(log₂(max(𝑤,ℎ)) + 1
+			// floor(log₂(max(𝑤,ℎ))) + 1
 			info.num_levels = 31 - UInt32(max(info.width, info.height).leadingZeroBitCount) + 1
 		}
 

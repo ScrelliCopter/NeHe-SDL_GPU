@@ -163,7 +163,7 @@ impl NeHeCopyPass<'_>
 		if gen_mipmaps
 		{
 			info.usage |= SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
-			info.num_levels = max(info.width, info.height).ilog2() + 1;  // floor(log₂(max(𝑤,ℎ)) + 1
+			info.num_levels = max(info.width, info.height).ilog2() + 1;  // floor(log₂(max(𝑤,ℎ))) + 1
 		}
 
 		if needs_convert

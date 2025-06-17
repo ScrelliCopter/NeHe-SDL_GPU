@@ -245,7 +245,7 @@ SDL_GPUTexture* NeHe_CreateGPUTextureFromSurface(NeHeContext* restrict ctx, cons
 	bool needsConvert = false;
 	switch (surface->format)
 	{
-	// FIMXE: I'm not sure that these are endian-safe
+	// FIXME: I'm not sure that these are endian-safe
 	case SDL_PIXELFORMAT_RGBA32:        info.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM; break;
 	case SDL_PIXELFORMAT_RGBA64:        info.format = SDL_GPU_TEXTUREFORMAT_R16G16B16A16_UNORM; break;
 	case SDL_PIXELFORMAT_RGB565:        info.format = SDL_GPU_TEXTUREFORMAT_B5G6R5_UNORM; break;
@@ -284,7 +284,7 @@ SDL_GPUTexture* NeHe_CreateGPUTextureFromSurface(NeHeContext* restrict ctx, cons
 	if (genMipmaps)
 	{
 		info.usage |= SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
-		// floor(log₂(max(𝑤,ℎ)) + 1
+		// floor(log₂(max(𝑤,ℎ))) + 1
 		info.num_levels = (Uint32)SDL_MostSignificantBitIndex32(SDL_max(info.width, info.height)) + 1;
 	}
 
