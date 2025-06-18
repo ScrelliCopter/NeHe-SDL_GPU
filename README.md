@@ -98,4 +98,26 @@ advantage of this to only reduce opacity in the unlit blended case; ergo we
 don't need a tint uniform in the light shader.
 
 ### Lesson 09: [Animated Scenes With Blended Textures](https://nehe.gamedev.net/tutorial/moving_bitmaps_in_3d_space/17001/) ###
+This lesson draws 50 (or 100 in "twinkle" mode) star particles with random
+colours; animated in a pretty concentric spiral.
+
+The current implementation instances the sprites using a storage buffer that
+contains each star's model-view matrix and colour, as all 100 stars are drawn
+in a single draw call. The approach used is still far from optimal and is also
+currently bugged on D3D12, so I may end up using a different approach later.
+
 ### Lesson 10: [Loading And Moving Through A 3D World](https://nehe.gamedev.net/tutorial/loading_and_moving_through_a_3d_world/22003/) ###
+Here it is, the ever infamous 3D world tutorial. Gaze in wonderment at the
+majesty of Mud.bmp as you explore the caverns of presumably the author's face
+processed with dazzling late 90's Photoshop effects, forever embossed in what
+looks to be some kind of granite texture. Step into the driver's seat with your
+computer keyboard as you explore this truly interactive digital Mount Rushmore
+through immersive tank controls.
+
+This lesson loads the 3D environment from a text file as a triangle list, the
+loader logic is almost identical with the only significant difference being the
+usage of a vertex buffer instead of looping over each triangle within
+`glBegin` & `glEnd`.
+
+The togglable blending is carried over from the last lesson and lighting is
+dropped, so only two pipeline states are required. 
