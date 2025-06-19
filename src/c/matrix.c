@@ -8,6 +8,7 @@
 
 extern inline void Mtx_Identity(float m[16]);
 extern inline void Mtx_Translation(float m[16], float x, float y, float z);
+extern inline void Mtx_Scaled(float m[16], float x, float y, float z);
 
 static void MakeRotation(float m[9], float c, float s, float x, float y, float z)
 {
@@ -107,6 +108,19 @@ void Mtx_Translate(float m[16], float x, float y, float z)
 	m[13] += x * m[1] + y * m[5] + z * m[9];
 	m[14] += x * m[2] + y * m[6] + z * m[10];
 	m[15] += x * m[3] + y * m[7] + z * m[11];
+}
+
+void Mtx_Scale(float m[16], float x, float y, float z)
+{
+	/*
+	  m = { [x 0 0 0]
+	        [0 y 0 0]
+	        [0 0 z 0]
+	        [0 0 0 1] } * m
+	*/
+	m[0] *= x; m[1] *= x; m[2]  *= x; m[3]  *= x;
+	m[4] *= y; m[5] *= y; m[6]  *= y; m[7]  *= y;
+	m[8] *= z; m[9] *= z; m[10] *= z; m[11] *= z;
 }
 
 void Mtx_Rotate(float m[16], float angle, float x, float y, float z)
