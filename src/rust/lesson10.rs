@@ -55,7 +55,7 @@ impl Sector
 		{
 			let mut tokens = line.split_whitespace();
 			let mut scanf = || tokens.next()
-				.map_or(0.0,  |token| token.parse::<f32>()
+				.map_or(0.0, |token| token.parse::<f32>()
 					.unwrap_or(0.0));
 			Vertex
 			{
