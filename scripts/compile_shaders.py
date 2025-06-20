@@ -89,7 +89,7 @@ def shader_prepend_ext(shader: Shader, prep_ext: str) -> Shader:
 	return Shader(shader.source, out.with_suffix(f".{prep_ext}{out.suffix}"))
 
 
-def compile_spirv_shaders(shaders: Iterable[Shader], suffix: str = "spv",
+def compile_spirv_shaders(shaders: list[Shader], suffix: str = "spv",
 		glslang: str | None = None, dxc: str | None = None, cwd: Path | None = None) -> None:
 	"""Compile shaders to SPIR-V using glslang for GLSL shaders and DXC for HLSL shaders
 
@@ -156,7 +156,7 @@ def compile_hlsl_spirv_shader(shader: Shader, type: str, flags: list[str] = None
 	subprocess.run([dxc, *cflags, "-Fo", shader.output, shader.source], cwd=cwd, check=True)
 
 
-def compile_d3d12_shaders(shaders: Iterable[Shader], build_dxbc: bool = False,
+def compile_d3d12_shaders(shaders: list[Shader], build_dxbc: bool = False,
 		dxc: str | None = None, cwd: Path | None = None) -> None:
 	for shader in shaders_suffixes(shaders, "hlsl", "dxb"):
 		compile_dxil_shader(shader_prepend_ext(shader, "vtx"), "vert",
@@ -215,44 +215,60 @@ def compile_shaders() -> None:
 	build_metal = True
 	build_dxil = True
 	build_dxbc = False
-	lessons = [ "lesson2", "lesson3", "lesson6", "lesson7", "lesson8", "lesson9" ]
 	src_dir = Path("src/shaders")
 	dest_dir = Path("data/shaders")
 
 	system = platform.system()
-	shaders = [Shader(src_dir / lesson, dest_dir / lesson) for lesson in lessons]
+
+	spirv_src = set()
+	metal_src = set()
+	hlsl_src = set()
 
 	root = Path(sys.argv[0]).resolve().parent.parent
 	root.joinpath(dest_dir).mkdir(parents=True, exist_ok=True)
+
+	if build_metal:
+		metal_src = set(p.stem for p in root.joinpath(src_dir).glob("*.metal"))
+	if build_spirv or build_dxil or build_dxbc:
+		hlsl_src = set(p.stem for p in root.joinpath(src_dir).glob("*.hlsl"))
+	if build_spirv:
+		spirv_src = set(p.stem for p in root.joinpath(src_dir).glob("*.glsl")) | hlsl_src
+		for src in metal_src - spirv_src:
+			print(f"WARN: \"{src}.metal\" exists but no \"{src}.glsl\" or \"{src}.hlsl\"")
+		if build_dxil or build_dxbc:
+			for src in spirv_src - hlsl_src:
+				print(f"WARN: \"{src}.glsl\" exists but no \"{src}.hlsl\"")
+
+	def source_shaders(sources: Iterable[str | Path]) -> Iterable[Shader]:
+		return (Shader(src_dir / src, dest_dir / src) for src in sources)
 
 	# Try to find cross-platform shader compilers
 	glslang = shutil.which("glslang")
 	dxc = shutil.which("dxc", path=f"/opt/dxc/bin:{os.environ.get('PATH', os.defpath)}")
 
+	# Build SPIR-V shaders for Vulkan
 	if build_spirv:
-		# Build SPIR-V shaders for Vulkan
-		compile_spirv_shaders(shaders, glslang=glslang, dxc=dxc, cwd=root)
+		compile_spirv_shaders(list(source_shaders(spirv_src)), glslang=glslang, dxc=dxc, cwd=root)
 
-	if build_metal:
-		# Build Metal shaders on macOS
-		if system == "Darwin":
-			compile_platform = "macos"
-			sdk_platform = "macosx"
-			min_version = "10.11"
-			for shader in shaders_suffixes(shaders, "metal", "metallib"):
-				compile_metal_shaders(
-					sources=[shader.source],
-					library=shader.output,
-					cflags=["-Wall", "-O3",
-						f"-std={compile_platform}-metal1.1",
-						f"-m{sdk_platform}-version-min={min_version}"],
-					sdk=sdk_platform,
-					cwd=root)
+	# Build Metal shaders on macOS
+	if build_metal and system == "Darwin":
+		compile_platform = "macos"
+		sdk_platform = "macosx"
+		min_version = "10.11"
+		for shader in shaders_suffixes(source_shaders(metal_src), "metal", "metallib"):
+			compile_metal_shaders(
+				sources=[shader.source],
+				library=shader.output,
+				cflags=["-Wall", "-O3",
+					f"-std={compile_platform}-metal1.1",
+					f"-m{sdk_platform}-version-min={min_version}"],
+				sdk=sdk_platform,
+				cwd=root)
 
 	# Build HLSL shaders on Windows or when DXC is available
 	is_windows = system == "Windows"
 	if (build_dxil or (is_windows and build_dxbc)) and (is_windows or dxc is not None):
-		compile_d3d12_shaders(shaders, build_dxbc=build_dxbc and is_windows, dxc=dxc, cwd=root)
+		compile_d3d12_shaders(list(source_shaders(hlsl_src)), build_dxbc=build_dxbc and is_windows, dxc=dxc, cwd=root)
 
 
 if __name__ == "__main__":
