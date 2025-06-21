@@ -8,8 +8,16 @@
 
 struct VertexInput
 {
+	// Vertex
 	float3 position [[attribute(0)]];
 	float2 texcoord [[attribute(1)]];
+
+	// Instance
+	float4 model0 [[attribute(2)]];
+	float4 model1 [[attribute(3)]];
+	float4 model2 [[attribute(4)]];
+	float4 model3 [[attribute(5)]];
+	float4 color  [[attribute(6)]];
 };
 
 struct VertexInstance
@@ -32,14 +40,14 @@ struct Vertex2Fragment
 
 vertex Vertex2Fragment VertexMain(
 	VertexInput in [[stage_in]],
-	const device VertexInstance* instance [[buffer(1)]],
-	constant VertexUniform& u [[buffer(0)]],
-	const uint instanceIdx [[instance_id]])
+	constant VertexUniform& u [[buffer(0)]])
 {
+	const auto model = metal::float4x4(in.model0, in.model1, in.model2, in.model3);
+
 	Vertex2Fragment out;
-	out.position = u.projection * instance[instanceIdx].model * float4(in.position, 1.0);
+	out.position = u.projection * model * float4(in.position, 1.0);
 	out.texcoord = in.texcoord;
-	out.color = half4(instance[instanceIdx].color);
+	out.color = half4(in.color);
 	return out;
 }
 
