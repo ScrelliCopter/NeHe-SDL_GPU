@@ -34,7 +34,7 @@ bool NeHe_InitGPU(NeHeContext* ctx, const char* title, int width, int height)
 	const SDL_GPUShaderFormat formats =
 		// FIXME: Re-enable D3D12 later when lesson9 works properly
 		SDL_GPU_SHADERFORMAT_METALLIB | SDL_GPU_SHADERFORMAT_MSL |
-		SDL_GPU_SHADERFORMAT_SPIRV /* | SDL_GPU_SHADERFORMAT_DXIL */;
+		SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL;
 	ctx->device = SDL_CreateGPUDevice(formats, true, NULL);
 	if (!ctx->device)
 	{
@@ -446,6 +446,14 @@ bool NeHe_LoadShaders(NeHeContext* restrict ctx,
 		SDL_memcpy(&path[basenameLen], ".vtx.dxb", 9);
 		vtxShader = LoadShader(ctx, path, info, format, SDL_GPU_SHADERSTAGE_VERTEX, "VertexMain");
 		SDL_memcpy(&path[basenameLen], ".pxl.dxb", 9);
+		frgShader = LoadShader(ctx, path, info, format, SDL_GPU_SHADERSTAGE_FRAGMENT, "PixelMain");
+	}
+	else if (availableFormats & SDL_GPU_SHADERFORMAT_DXBC)  // Direct3D 12 Shader Model 5.1
+	{
+		const SDL_GPUShaderFormat format = SDL_GPU_SHADERFORMAT_DXBC;
+		SDL_memcpy(&path[basenameLen], ".vtx.fxb", 9);
+		vtxShader = LoadShader(ctx, path, info, format, SDL_GPU_SHADERSTAGE_VERTEX, "VertexMain");
+		SDL_memcpy(&path[basenameLen], ".pxl.fxb", 9);
 		frgShader = LoadShader(ctx, path, info, format, SDL_GPU_SHADERSTAGE_FRAGMENT, "PixelMain");
 	}
 
