@@ -33,7 +33,12 @@ ConstantBuffer<VertexUniform> ubo : register(b0, space1);
 
 Vertex2Pixel VertexMain(VertexInput input)
 {
-	const float4x4 modelView = mul(ubo.view, transpose(input.model));
+#ifdef VULKAN
+	const float4x4 model = transpose(input.model);
+#else
+	const float4x4 model = input.model;
+#endif
+	const float4x4 modelView = mul(ubo.view, model);
 	const float3 normal = normalize(mul(modelView, float4(input.normal, 0.0))).xyz;
 
 	const float3 lightDir = float3(0.0, 0.0, 1.0);
