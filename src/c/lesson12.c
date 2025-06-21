@@ -79,7 +79,7 @@ static float xRot = 0.0f, yRot = 0.0f;
 static float z = -20.0f;
 
 static const int numRows = 5;
-static const int numInstances = numRows * (numRows + 1) / 2;  // Triangular number
+#define NUM_INSTANCES (numRows * (numRows + 1) / 2)  // Triangular number
 
 
 static bool Lesson12_Init(NeHeContext* restrict ctx)
@@ -236,7 +236,7 @@ static bool Lesson12_Init(NeHeContext* restrict ctx)
 	instanceBuffer = SDL_CreateGPUBuffer(ctx->device, &(const SDL_GPUBufferCreateInfo)
 	{
 		.usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
-		.size = sizeof(Instance) * numInstances
+		.size = sizeof(Instance) * NUM_INSTANCES
 	});
 	if (!instanceBuffer)
 	{
@@ -245,7 +245,7 @@ static bool Lesson12_Init(NeHeContext* restrict ctx)
 	instanceXferBuffer = SDL_CreateGPUTransferBuffer(ctx->device, &(const SDL_GPUTransferBufferCreateInfo)
 	{
 		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-		.size = sizeof(Instance) * numInstances
+		.size = sizeof(Instance) * NUM_INSTANCES
 	});
 	if (!instanceXferBuffer)
 	{
@@ -340,7 +340,7 @@ static void Lesson12_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	{
 		.buffer = instanceBuffer,
 		.offset = 0,
-		.size = sizeof(Instance) * numInstances
+		.size = sizeof(Instance) * NUM_INSTANCES
 	}, true);
 	SDL_EndGPUCopyPass(copyPass);
 
@@ -375,7 +375,7 @@ static void Lesson12_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(u));
 
 	// Draw textured cube instances
-	SDL_DrawGPUIndexedPrimitives(pass, SDL_arraysize(indices), numInstances, 0, 0, 0);
+	SDL_DrawGPUIndexedPrimitives(pass, SDL_arraysize(indices), NUM_INSTANCES, 0, 0, 0);
 
 	SDL_EndGPURenderPass(pass);
 
