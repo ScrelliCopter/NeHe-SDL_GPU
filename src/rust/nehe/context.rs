@@ -22,7 +22,8 @@ pub struct NeHeContext
 	pub window: *mut SDL_Window,
 	pub device: *mut SDL_GPUDevice,
 	pub depth_texture: *mut SDL_GPUTexture,
-	pub depth_texture_size: (u32, u32)
+	pub depth_texture_size: (u32, u32),
+	base_path: PathBuf,
 }
 
 impl NeHeContext
@@ -63,11 +64,16 @@ impl NeHeContext
 				SDL_GPU_PRESENTMODE_VSYNC);
 		}
 
+		// Get SDL application base path
+		let base = unsafe { CStr::from_ptr(SDL_GetBasePath()) };
+		let base_path = Path::new(from_utf8(base.to_bytes()).unwrap()).to_path_buf();
+
 		Ok(Self
 		{
 			window, device,
 			depth_texture: null_mut(),
 			depth_texture_size: (0, 0),
+			base_path,
 		})
 	}
 }
@@ -138,9 +144,7 @@ impl NeHeContext
 		fragment_samplers: u32)
 		-> Result<(*mut SDL_GPUShader, *mut SDL_GPUShader), NeHeError>
 	{
-		let base = unsafe { CStr::from_ptr(SDL_GetBasePath()) };
-		let path = Path::new(from_utf8(base.to_bytes()).unwrap())
-			.join("Data/Shaders").join(name);
+		let path = self.base_path().join("Data/Shaders").join(name);
 
 		let mut info = ShaderProgramCreateInfo
 		{
@@ -231,6 +235,8 @@ impl NeHeContext
 		lambda(&mut pass)?;
 		pass.submit()
 	}
+
+	pub fn base_path(&self) -> &Path { self.base_path.as_path() }
 }
 
 struct ShaderProgramCreateInfo

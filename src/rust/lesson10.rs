@@ -19,6 +19,7 @@ use std::ffi::c_void;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::mem::offset_of;
+use std::path::Path;
 use std::process::ExitCode;
 use std::ptr::{addr_of, null_mut};
 
@@ -34,10 +35,10 @@ struct Sector { pub vertices: Vec<Vertex> }
 
 impl Sector
 {
-	fn load_world(&mut self, filename: &str) -> Result<(), NeHeError>
+	fn load_world(&mut self, filepath: &Path) -> Result<(), NeHeError>
 	{
 		// Read world file as lines
-		let file = File::open(filename)?;
+		let file = File::open(filepath)?;
 		let mut lines = BufReader::new(file).lines()
 			.map(|line| line.unwrap())
 			.filter(|line| !line.trim().is_empty() && !line.starts_with("/"));
@@ -170,7 +171,7 @@ impl AppImplementation for Lesson10
 
 	fn init(&mut self, ctx: &NeHeContext) -> Result<(), NeHeError>
 	{
-		self.world.load_world("Data/World.txt")?;
+		self.world.load_world(&ctx.base_path().join("Data/World.txt"))?;
 
 		let (vertex_shader, fragment_shader) = ctx.load_shaders("lesson6", 1, 0, 1)?;
 
