@@ -9,9 +9,9 @@ struct VertexInput
 	float2 texcoord : TEXCOORD1;
 };
 
-cbuffer VertexUniform : register(b0, space1)
+struct VertexUniform
 {
-	float4x4 viewproj : packoffset(c0);
+	float4x4 viewproj;
 };
 
 struct Vertex2Pixel
@@ -20,10 +20,12 @@ struct Vertex2Pixel
 	float2 texcoord : TEXCOORD0;
 };
 
+ConstantBuffer<VertexUniform> ubo : register(b0, space1);
+
 Vertex2Pixel VertexMain(VertexInput input)
 {
 	Vertex2Pixel output;
-	output.position = mul(viewproj, float4(input.position, 1.0));
+	output.position = mul(ubo.viewproj, float4(input.position, 1.0));
 	output.texcoord = input.texcoord;
 	return output;
 }

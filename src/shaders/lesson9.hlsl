@@ -16,11 +16,9 @@ struct VertexInstance
 	float4 color;
 };
 
-StructuredBuffer<VertexInstance> Instances : register(t0, space0);
-
-cbuffer VertexUniform : register(b0, space1)
+struct VertexUniform
 {
-	float4x4 projection : packoffset(c0);
+	float4x4 projection;
 };
 
 struct Vertex2Pixel
@@ -30,11 +28,14 @@ struct Vertex2Pixel
 	half4 color : COLOR0;
 };
 
+ConstantBuffer<VertexUniform> ubo : register(b0, space1);
+StructuredBuffer<VertexInstance> Instances : register(t0, space0);
+
 Vertex2Pixel VertexMain(VertexInput input)
 {
 	//FIXME: Indexing dynamically like this works on Vulkan but not D3D12...
 	const VertexInstance instance = Instances[input.instanceID];
-	const float4x4 modelViewProj = mul(projection, instance.model);
+	const float4x4 modelViewProj = mul(ubo.projection, instance.model);
 
 	Vertex2Pixel output;
 	output.position = mul(modelViewProj, float4(input.position, 1.0));

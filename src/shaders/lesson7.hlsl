@@ -10,17 +10,17 @@ struct VertexInput
 	float3 normal : TEXCOORD2;
 };
 
-cbuffer VertexUniform : register(b0, space1)
+struct VertexUniform
 {
-	float4x4 modelView : packoffset(c0);
-	float4x4 projection : packoffset(c4);
+	float4x4 modelView;
+	float4x4 projection;
 };
 
-cbuffer LightUniform : register(b1, space1)
+struct LightUniform
 {
-	float4 lightAmbient : packoffset(c0);
-	float4 lightDiffuse : packoffset(c1);
-	float4 lightPosition : packoffset(c2);
+	float4 ambient;
+	float4 diffuse;
+	float4 position;
 };
 
 struct Vertex2Pixel
@@ -30,21 +30,24 @@ struct Vertex2Pixel
 	half4 color : COLOR0;
 };
 
+ConstantBuffer<VertexUniform> ubo : register(b0, space1);
+ConstantBuffer<LightUniform> light : register(b1, space1);
+
 Vertex2Pixel VertexMain(VertexInput input)
 {
-	const float4 position = mul(modelView, float4(input.position, 1.0));
-	const float3 normal = normalize(mul(modelView, float4(input.normal, 0.0))).xyz;
+	const float4 position = mul(ubo.modelView, float4(input.position, 1.0));
+	const float3 normal = normalize(mul(ubo.modelView, float4(input.normal, 0.0))).xyz;
 
-	const float3 lightVec = lightPosition.xyz - position.xyz;
+	const float3 lightVec = light.position.xyz - position.xyz;
 	const float lightDist2 = dot(lightVec, lightVec);
 	const float3 dir = rsqrt(lightDist2) * lightVec;
 	const float lambert = max(0.0, dot(normal, dir));
 
-	const half3 ambient = 0.04 + 0.2 * half3(lightAmbient.rgb);
-	const half3 diffuse = 0.8 * half3(lightDiffuse.rgb);
+	const half3 ambient = 0.04 + 0.2 * half3(light.ambient.rgb);
+	const half3 diffuse = 0.8 * half3(light.diffuse.rgb);
 
 	Vertex2Pixel output;
-	output.position = mul(projection, position);
+	output.position = mul(ubo.projection, position);
 	output.texcoord = input.texcoord;
 	output.color = half4(ambient + lambert * diffuse, 1.0);
 	return output;

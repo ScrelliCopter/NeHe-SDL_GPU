@@ -9,10 +9,10 @@ struct VertexInput
 	float2 texCoord : TEXCOORD1;
 };
 
-cbuffer VertexUniform : register(b0, space1)
+struct VertexUniform
 {
-	float4x4 viewProj : packoffset(c0);
-	float waveOffset : packoffset(c4);
+	float4x4 viewProj;
+	float waveOffset;
 };
 
 struct Vertex2Pixel
@@ -21,14 +21,16 @@ struct Vertex2Pixel
 	float2 texCoord : TEXCOORD0;
 };
 
+ConstantBuffer<VertexUniform> ubo : register(b0, space1);
+
 Vertex2Pixel VertexMain(VertexInput input)
 {
 	const float rescale = 44.0 / 45.0, tau = 6.283185308;
-	const float z = sin((input.texCoord.x * rescale + waveOffset) * tau);
+	const float z = sin((input.texCoord.x * rescale + ubo.waveOffset) * tau);
 	const float4 position = float4(input.position, z, 1.0);
 
 	Vertex2Pixel output;
-	output.position = mul(viewProj, position);
+	output.position = mul(ubo.viewProj, position);
 	output.texCoord = input.texCoord;
 	return output;
 }

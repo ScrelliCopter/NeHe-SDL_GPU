@@ -16,10 +16,9 @@ struct VertexInput
 	float4 color : TEXCOORD8;
 };
 
-cbuffer VertexUniform : register(b0, space1)
+struct VertexUniform
 {
-	float4x4 view : packoffset(c0);
-	float4x4 projection : packoffset(c4);
+	float4x4 view, projection;
 };
 
 
@@ -30,9 +29,11 @@ struct Vertex2Pixel
 	half4 color : COLOR0;
 };
 
+ConstantBuffer<VertexUniform> ubo : register(b0, space1);
+
 Vertex2Pixel VertexMain(VertexInput input)
 {
-	const float4x4 modelView = mul(view, transpose(input.model));
+	const float4x4 modelView = mul(ubo.view, transpose(input.model));
 	const float3 normal = normalize(mul(modelView, float4(input.normal, 0.0))).xyz;
 
 	const float3 lightDir = float3(0.0, 0.0, 1.0);
@@ -41,7 +42,7 @@ Vertex2Pixel VertexMain(VertexInput input)
 	const float lighting = input.tint * (0.2 + lambert);
 
 	Vertex2Pixel output;
-	output.position = mul(projection, mul(modelView, float4(input.position, 1.0)));
+	output.position = mul(ubo.projection, mul(modelView, float4(input.position, 1.0)));
 	output.texCoord = input.texCoord;
 	output.color = half4(input.color) * half4(lighting, lighting, lighting, 1.0);
 	return output;
