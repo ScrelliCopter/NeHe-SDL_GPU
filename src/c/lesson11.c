@@ -21,11 +21,11 @@ static SDL_GPUTexture* texture = NULL;
 
 static float projection[16];
 
-static const int gridSize = 44;
-static const int numGridTris = gridSize * gridSize * 6;
-static const int numGridLines = gridSize * (gridSize + 1) * 4;
-static const int numIndices = numGridTris + numGridLines;
-SDL_COMPILE_TIME_ASSERT(numIndices, numIndices <= UINT16_MAX);
+#define GRID_SIZE 44
+#define NUM_GRID_TRIS (GRID_SIZE * GRID_SIZE * 6)
+#define NUM_GRID_LINES (GRID_SIZE * (GRID_SIZE + 1) * 4)
+#define NUM_INDICES (NUM_GRID_TRIS + NUM_GRID_LINES)
+NEHE_STATIC_ASSERT(numIndices, NUM_INDICES <= UINT16_MAX);
 typedef uint16_t index_t;
 
 static int wiggleCount = 0;
@@ -131,13 +131,13 @@ static bool Lesson11_Init(NeHeContext* ctx)
 	}
 
 	// Build flag vertices
-	Vertex vertices[(gridSize + 1) * (gridSize + 1)];
-	const float xyStep = 9.0f / (float)(gridSize + 1);  // Deliberately off-by-one to match behaviour
-	const float uvStep = 1.0f / (float)gridSize;
+	Vertex vertices[(GRID_SIZE + 1) * (GRID_SIZE + 1)];
+	const float xyStep = 9.0f / (float)(GRID_SIZE + 1);  // Deliberately off-by-one to match behaviour
+	const float uvStep = 1.0f / (float)GRID_SIZE;
 	unsigned i = 0;
-	for (int y = 0; y < gridSize + 1; ++y)
+	for (int y = 0; y < GRID_SIZE + 1; ++y)
 	{
-		for (int x = 0; x < gridSize + 1; ++x)
+		for (int x = 0; x < GRID_SIZE + 1; ++x)
 		{
 			vertices[i++] = (Vertex)
 			{
@@ -150,36 +150,36 @@ static bool Lesson11_Init(NeHeContext* ctx)
 	}
 
 	// Build flag indices
-	index_t indices[numIndices];
+	index_t indices[NUM_INDICES];
 	i = 0;
-	for (int y = 0; y < gridSize; ++y)
+	for (int y = 0; y < GRID_SIZE; ++y)
 	{
-		const int base = y * (gridSize + 1);
-		for (int x = 0; x < gridSize; ++x)
+		const int base = y * (GRID_SIZE + 1);
+		for (int x = 0; x < GRID_SIZE; ++x)
 		{
 			indices[i++] = (index_t)(base + x);
-			indices[i++] = (index_t)(base + x + gridSize + 1);
-			indices[i++] = (index_t)(base + x + gridSize + 2);
-			indices[i++] = (index_t)(base + x + gridSize + 2);
+			indices[i++] = (index_t)(base + x + GRID_SIZE + 1);
+			indices[i++] = (index_t)(base + x + GRID_SIZE + 2);
+			indices[i++] = (index_t)(base + x + GRID_SIZE + 2);
 			indices[i++] = (index_t)(base + x + 1);
 			indices[i++] = (index_t)(base + x);
 		}
 	}
-	for (int y = 0; y < gridSize + 1; ++y)
+	for (int y = 0; y < GRID_SIZE + 1; ++y)
 	{
-		const int base = y * (gridSize + 1);
-		for (int x = 0; x < gridSize; ++x)
+		const int base = y * (GRID_SIZE + 1);
+		for (int x = 0; x < GRID_SIZE; ++x)
 		{
 			indices[i++] = (index_t)(base + x);
 			indices[i++] = (index_t)(base + x + 1);
 		}
 	}
-	for (int x = 0; x < gridSize + 1; ++x)
+	for (int x = 0; x < GRID_SIZE + 1; ++x)
 	{
-		for (int y = 0; y < gridSize; ++y)
+		for (int y = 0; y < GRID_SIZE; ++y)
 		{
-			indices[i++] = (index_t)(x + (gridSize + 1) * y);
-			indices[i++] = (index_t)(x + (gridSize + 1) * (y + 1));
+			indices[i++] = (index_t)(x + (GRID_SIZE + 1) * y);
+			indices[i++] = (index_t)(x + (GRID_SIZE + 1) * (y + 1));
 		}
 	}
 
@@ -272,11 +272,11 @@ static void Lesson11_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 
 	// Draw textured flag (Front, triangles)
 	SDL_BindGPUGraphicsPipeline(pass, psoFront);
-	SDL_DrawGPUIndexedPrimitives(pass, numGridTris, 1, 0, 0, 0);
+	SDL_DrawGPUIndexedPrimitives(pass, NUM_GRID_TRIS, 1, 0, 0, 0);
 
 	// Draw textured flag (Back, lines)
 	SDL_BindGPUGraphicsPipeline(pass, psoBack);
-	SDL_DrawGPUIndexedPrimitives(pass, numGridTris, 1, numGridTris, 0, 0);
+	SDL_DrawGPUIndexedPrimitives(pass, NUM_GRID_TRIS, 1, NUM_GRID_TRIS, 0, 0);
 
 	SDL_EndGPURenderPass(pass);
 

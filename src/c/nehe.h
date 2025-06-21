@@ -8,6 +8,14 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)) && __STDC_VERSION__ == 199901L
+# define NEHE_STATIC_ASSERT(NAME, CONDITION) \
+	_Pragma("GCC diagnostic ignored \"-Wpedantic\"") \
+	_Static_assert(CONDITION)
+#else
+# define NEHE_STATIC_ASSERT(NAME, CONDITION) SDL_COMPILE_TIME_ASSERT(NAME, CONDITION)
+#endif
+
 typedef struct NeHeContext
 {
 	SDL_Window* window;

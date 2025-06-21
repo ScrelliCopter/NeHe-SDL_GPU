@@ -297,7 +297,7 @@ static void Lesson12_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 		.cycle = true
 	};
 
-	const static float boxColors[5][3] =
+	static const float boxColors[5][3] =
 	{
 		{ 1.0f, 0.0f, 0.0f },  // Red
 		{ 1.0f, 0.5f, 0.0f },  // Orange
