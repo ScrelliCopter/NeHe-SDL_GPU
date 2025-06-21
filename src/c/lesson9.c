@@ -60,13 +60,14 @@ static bool Lesson9_Init(NeHeContext* ctx)
 {
 	SDL_GPUShader* vertexShader, * fragmentShader;
 	if (!NeHe_LoadShaders(ctx, &vertexShader, &fragmentShader, "lesson9",
-		&(const NeHeShaderProgramCreateInfo){ .vertexUniforms = 1, .fragmentSamplers = 1, .vertexStorage = 1 }))
+		&(const NeHeShaderProgramCreateInfo){ .vertexUniforms = 1, .fragmentSamplers = 1 }))
 	{
 		return false;
 	}
 
 	const SDL_GPUVertexAttribute vertexAttribs[] =
 	{
+		// Mesh attributes
 		{
 			.location = 0,
 			.buffer_slot = 0,
@@ -78,6 +79,53 @@ static bool Lesson9_Init(NeHeContext* ctx)
 			.buffer_slot = 0,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
 			.offset = offsetof(Vertex, u)
+		},
+		// Instance matrix attributes (one for each column)
+		{
+			.location = 2,
+			.buffer_slot = 1,
+			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+			.offset = (uint32_t)offsetof(Instance, model)
+		},
+		{
+			.location = 3,
+			.buffer_slot = 1,
+			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+			.offset = (uint32_t)offsetof(Instance, model[4])
+		},
+		{
+			.location = 4,
+			.buffer_slot = 1,
+			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+			.offset = (uint32_t)offsetof(Instance, model[8])
+		},
+		{
+			.location = 5,
+			.buffer_slot = 1,
+			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+			.offset = (uint32_t)offsetof(Instance, model[12])
+		},
+		// Instance colour
+		{
+			.location = 6,
+			.buffer_slot = 1,
+			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+			.offset = offsetof(Instance, color)
+		}
+	};
+	const SDL_GPUVertexBufferDescription bufferDescriptors[] =
+	{
+		// Slot for mesh
+		{
+			.slot = 0,
+			.pitch = sizeof(Vertex),
+			.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX
+		},
+		// Slot for instances
+		{
+			.slot = 1,
+			.pitch = sizeof(Instance),
+			.input_rate = SDL_GPU_VERTEXINPUTRATE_INSTANCE
 		}
 	};
 	pso = SDL_CreateGPUGraphicsPipeline(ctx->device, &(const SDL_GPUGraphicsPipelineCreateInfo)
@@ -87,13 +135,8 @@ static bool Lesson9_Init(NeHeContext* ctx)
 		.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
 		.vertex_input_state =
 		{
-			.vertex_buffer_descriptions = &(const SDL_GPUVertexBufferDescription)
-			{
-				.slot = 0,
-				.pitch = sizeof(Vertex),
-				.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX
-			},
-			.num_vertex_buffers = 1,
+			.vertex_buffer_descriptions = bufferDescriptors,
+			.num_vertex_buffers = SDL_arraysize(bufferDescriptors),
 			.vertex_attributes = vertexAttribs,
 			.num_vertex_attributes = SDL_arraysize(vertexAttribs)
 		},
@@ -157,7 +200,7 @@ static bool Lesson9_Init(NeHeContext* ctx)
 
 	instanceBuffer = SDL_CreateGPUBuffer(ctx->device, &(const SDL_GPUBufferCreateInfo)
 	{
-		.usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
+		.usage = SDL_GPU_BUFFERUSAGE_VERTEX,
 		.size = sizeof(Instance) * 2 * numStars
 	});
 	if (!instanceBuffer)
@@ -293,12 +336,13 @@ static void Lesson9_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restri
 		.sampler = sampler
 	}, 1);
 
-	SDL_BindGPUVertexBuffers(renderPass, 0, &(const SDL_GPUBufferBinding)
+	// Bind vertex, instance, and index buffers
+	const SDL_GPUBufferBinding vertexBindings[] =
 	{
-		.buffer = vtxBuffer,
-		.offset = 0
-	}, 1);
-	SDL_BindGPUVertexStorageBuffers(renderPass, 0, &instanceBuffer, 1);
+		{ .buffer = vtxBuffer, .offset = 0 },
+		{ .buffer = instanceBuffer, .offset = 0 }
+	};
+	SDL_BindGPUVertexBuffers(renderPass, 0, vertexBindings, SDL_arraysize(vertexBindings));
 	SDL_BindGPUIndexBuffer(renderPass, &(const SDL_GPUBufferBinding)
 	{
 		.buffer = idxBuffer,
