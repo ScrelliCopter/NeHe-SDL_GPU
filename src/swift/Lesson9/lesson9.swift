@@ -99,7 +99,7 @@ struct Lesson9: AppDelegate
 	mutating func `init`(ctx: inout NeHeContext) throws(NeHeError)
 	{
 		let (vertexShader, fragmentShader) = try ctx.loadShaders(name: "lesson9",
-			vertexUniforms: 1, vertexStorage: 1, fragmentSamplers: 1)
+			vertexUniforms: 1, fragmentSamplers: 1)
 		defer
 		{
 			SDL_ReleaseGPUShader(ctx.device, fragmentShader)
@@ -108,14 +108,22 @@ struct Lesson9: AppDelegate
 
 		let vertexDescriptions: [SDL_GPUVertexBufferDescription] =
 		[
+			// Slot for mesh
 			SDL_GPUVertexBufferDescription(
 				slot: 0,
 				pitch: UInt32(MemoryLayout<Vertex>.stride),
 				input_rate: SDL_GPU_VERTEXINPUTRATE_VERTEX,
 				instance_step_rate: 0),
+			// Slot for instances
+			SDL_GPUVertexBufferDescription(
+				slot: 1,
+				pitch: UInt32(MemoryLayout<Instance>.stride),
+				input_rate: SDL_GPU_VERTEXINPUTRATE_INSTANCE,
+				instance_step_rate: 0),
 		]
 		let vertexAttributes: [SDL_GPUVertexAttribute] =
 		[
+			// Mesh attributes
 			SDL_GPUVertexAttribute(
 				location: 0,
 				buffer_slot: 0,
@@ -126,6 +134,33 @@ struct Lesson9: AppDelegate
 				buffer_slot: 0,
 				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
 				offset: UInt32(MemoryLayout<Vertex>.offset(of: \.texcoord)!)),
+			// Instance matrix attributes (one for each column)
+			SDL_GPUVertexAttribute(
+				location: 2,
+				buffer_slot: 1,
+				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+				offset: UInt32(MemoryLayout<Instance>.offset(of: \.model)!)),
+			SDL_GPUVertexAttribute(
+				location: 3,
+				buffer_slot: 1,
+				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+				offset: UInt32(MemoryLayout<Instance>.offset(of: \.model)!) + 16),
+			SDL_GPUVertexAttribute(
+				location: 4,
+				buffer_slot: 1,
+				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+				offset: UInt32(MemoryLayout<Instance>.offset(of: \.model)!) + 32),
+			SDL_GPUVertexAttribute(
+				location: 5,
+				buffer_slot: 1,
+				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+				offset: UInt32(MemoryLayout<Instance>.offset(of: \.model)!) + 48),
+			// Instance colour
+			SDL_GPUVertexAttribute(
+				location: 6,
+				buffer_slot: 1,
+				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+				offset: UInt32(MemoryLayout<Instance>.offset(of: \.color)!)),
 		]
 
 		var rasterizerDesc = SDL_GPURasterizerState()
@@ -187,7 +222,7 @@ struct Lesson9: AppDelegate
 		// Create GPU side buffer for star instances
 		let instanceBufferSize = UInt32(MemoryLayout<Instance>.stride * 2 * numStars)
 		var instanceInfo = SDL_GPUBufferCreateInfo(
-			usage: SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
+			usage: SDL_GPU_BUFFERUSAGE_VERTEX,
 			size: instanceBufferSize,
 			props: 0)
 		guard let instanceBuffer = SDL_CreateGPUBuffer(ctx.device, &instanceInfo) else
@@ -294,15 +329,16 @@ struct Lesson9: AppDelegate
 		var textureBinding = SDL_GPUTextureSamplerBinding(texture: self.texture, sampler: self.sampler)
 		SDL_BindGPUFragmentSamplers(renderPass, 0, &textureBinding, 1)
 
-		// Bind vertex & index buffers
-		let vtxBindings = [ SDL_GPUBufferBinding(buffer: self.vtxBuffer, offset: 0) ]
+		// Bind vertex, instance, and index buffers
+		let vtxBindings =
+		[
+			SDL_GPUBufferBinding(buffer: self.vtxBuffer, offset: 0),
+			SDL_GPUBufferBinding(buffer: self.instanceBuffer, offset: 0),
+		]
 		var idxBinding = SDL_GPUBufferBinding(buffer: self.idxBuffer, offset: 0)
 		SDL_BindGPUVertexBuffers(renderPass, 0,
 			vtxBindings.withUnsafeBufferPointer(\.baseAddress!), UInt32(vtxBindings.count))
 		SDL_BindGPUIndexBuffer(renderPass, &idxBinding, SDL_GPU_INDEXELEMENTSIZE_16BIT)
-
-		// Bind instance storage buffer
-		SDL_BindGPUVertexStorageBuffers(renderPass, 0, &self.instanceBuffer, 1)
 
 		// Push shader uniforms
 		SDL_PushGPUVertexUniformData(cmd, 0, &self.projection, UInt32(MemoryLayout<simd_float4x4>.size))
