@@ -101,7 +101,8 @@ static bool Lesson9_Init(NeHeContext* ctx)
 		{
 			.fill_mode = SDL_GPU_FILLMODE_FILL,
 			.cull_mode = SDL_GPU_CULLMODE_NONE,
-			.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE
+			.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE,  // Right-handed coordinates
+			.enable_depth_clip = true  // OpenGL-like clip behaviour
 		},
 		.target_info =
 		{

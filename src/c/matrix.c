@@ -61,9 +61,9 @@ void Mtx_Perspective(float m[16], float fovy, float aspect, float near, float fa
 {
 	const float h = 1.0f / SDL_tanf(fovy * (SDL_PI_F / 180.0f) * 0.5f);
 	const float w = h / aspect;
-	const float invClipRng = 1.0f / (far - near);
-	const float zh = -(far + near) * invClipRng;
-	const float zl = -(2.0f * far * near) * invClipRng;
+	const float invClipRng = 1.0f / (near - far);
+	const float zh = far * invClipRng;
+	const float zl = (far * near) * invClipRng;
 
 	/*
 	  [w  0  0  0]
