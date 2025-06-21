@@ -159,10 +159,11 @@ impl AppImplementation for Lesson9
 
 	fn init(&mut self, ctx: &NeHeContext) -> Result<(), NeHeError>
 	{
-		let (vertex_shader, fragment_shader) = ctx.load_shaders("lesson9", 1, 1, 1)?;
+		let (vertex_shader, fragment_shader) = ctx.load_shaders("lesson9", 1, 0, 1)?;
 
 		const VERTEX_DESCRIPTIONS: &'static [SDL_GPUVertexBufferDescription] =
 		&[
+			// Slot for mesh
 			SDL_GPUVertexBufferDescription
 			{
 				slot: 0,
@@ -170,9 +171,18 @@ impl AppImplementation for Lesson9
 				input_rate: SDL_GPU_VERTEXINPUTRATE_VERTEX,
 				instance_step_rate: 0,
 			},
+			// Slot for instances
+			SDL_GPUVertexBufferDescription
+			{
+				slot: 1,
+				pitch: size_of::<Instance>() as u32,
+				input_rate: SDL_GPU_VERTEXINPUTRATE_INSTANCE,
+				instance_step_rate: 0,
+			},
 		];
 		const VERTEX_ATTRIBS: &'static [SDL_GPUVertexAttribute] =
 		&[
+			// Mesh attributes
 			SDL_GPUVertexAttribute
 			{
 				location: 0,
@@ -186,6 +196,43 @@ impl AppImplementation for Lesson9
 				buffer_slot: 0,
 				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
 				offset: offset_of!(Vertex, u) as u32,
+			},
+			// Instance matrix attributes (one for each column)
+			SDL_GPUVertexAttribute
+			{
+				location: 2,
+				buffer_slot: 1,
+				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+				offset: offset_of!(Instance, model) as u32,
+			},
+			SDL_GPUVertexAttribute
+			{
+				location: 3,
+				buffer_slot: 1,
+				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+				offset: offset_of!(Instance, model) as u32 + 16,
+			},
+			SDL_GPUVertexAttribute
+			{
+				location: 4,
+				buffer_slot: 1,
+				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+				offset: offset_of!(Instance, model) as u32 + 32,
+			},
+			SDL_GPUVertexAttribute
+			{
+				location: 5,
+				buffer_slot: 1,
+				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+				offset: offset_of!(Instance, model) as u32 + 48,
+			},
+			// Instance colour
+			SDL_GPUVertexAttribute
+			{
+				location: 6,
+				buffer_slot: 1,
+				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+				offset: offset_of!(Instance, color) as u32,
 			},
 		];
 
@@ -242,7 +289,7 @@ impl AppImplementation for Lesson9
 		let instance_buffer_size = (size_of::<Instance>() * 2 * num_stars) as u32;
 		let instance_info = SDL_GPUBufferCreateInfo
 		{
-			usage: SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ,
+			usage: SDL_GPU_BUFFERUSAGE_VERTEX,
 			size: instance_buffer_size,
 			props: 0,
 		};
@@ -365,15 +412,15 @@ impl AppImplementation for Lesson9
 			let texture_binding = SDL_GPUTextureSamplerBinding { texture: self.texture, sampler: self.sampler };
 			SDL_BindGPUFragmentSamplers(render_pass, 0, &texture_binding, 1);
 
-			// Bind vertex & index buffers
-			let vtx_bindings = [ SDL_GPUBufferBinding { buffer: self.vtx_buffer, offset: 0 } ];
-			let idx_binding = SDL_GPUBufferBinding { buffer: self.idx_buffer, offset: 0 } ;
-
+			// Bind vertex, instance, and index buffers
+			let vtx_bindings =
+			[
+				SDL_GPUBufferBinding { buffer: self.vtx_buffer, offset: 0 },
+				SDL_GPUBufferBinding { buffer: self.instance_buffer, offset: 0 },
+			];
+			let idx_binding = SDL_GPUBufferBinding { buffer: self.idx_buffer, offset: 0 };
 			SDL_BindGPUVertexBuffers(render_pass, 0, vtx_bindings.as_ptr(), vtx_bindings.len() as u32);
 			SDL_BindGPUIndexBuffer(render_pass, &idx_binding, SDL_GPU_INDEXELEMENTSIZE_16BIT);
-
-			// Bind instance storage buffer
-			SDL_BindGPUVertexStorageBuffers(render_pass, 0, &self.instance_buffer, 1);
 
 			// Push shader uniforms
 			SDL_PushGPUVertexUniformData(cmd, 0, self.projection.as_ptr() as *mut c_void, size_of::<Mtx>() as u32);

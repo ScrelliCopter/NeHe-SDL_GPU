@@ -27,7 +27,6 @@ pub struct NeHeContext
 
 impl NeHeContext
 {
-	#[allow(unsafe_op_in_unsafe_fn)]
 	pub(in crate) fn init(title: &str, w: i32, h: i32) -> Result<Self, NeHeError>
 	{
 		// Create window
