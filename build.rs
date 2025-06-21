@@ -32,17 +32,24 @@ pub fn copy_resources<S: AsRef<str>>(src_dir: &PathBuf, dst_dir: &PathBuf, resou
 
 pub fn copy_shaders<const N: usize>(src_dir: &PathBuf, dst_dir: &PathBuf, shaders: &[&str; N])
 {
-	let resources = shaders.into_iter().flat_map(|name|
+	let mut resources: Vec<String> = vec![];
+	for name in shaders
 	{
 		if cfg!(target_os="macos")
 		{
-			vec![format!("{name}.metallib")]
+			resources.push(format!("{name}.metallib"));
+			continue;
 		}
-		else
+
+		resources.push(format!("{name}.vtx.spv"));
+		resources.push(format!("{name}.frg.spv"));
+
+		if cfg!(target_os="windows")
 		{
-			vec![format!("{name}.vtx.spv"), format!("{name}.frg.spv")]
+			resources.push(format!("{name}.vtx.dxb"));
+			resources.push(format!("{name}.pxl.dxb"));
 		}
-	}).collect();
+	}
 	copy_resources(src_dir, dst_dir, resources);
 }
 
