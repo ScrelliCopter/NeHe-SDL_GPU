@@ -464,13 +464,14 @@ bool NeHe_LoadShaders(NeHeContext* restrict ctx,
 	return true;
 }
 
-SDL_GPUBuffer* NeHe_CreateVertexBuffer(NeHeContext* restrict ctx, const void* restrict vertices, uint32_t verticesSize)
+SDL_GPUBuffer* NeHe_CreateBuffer(NeHeContext* restrict ctx, const void* restrict data, uint32_t size,
+	SDL_GPUBufferUsageFlags usage)
 {
-	// Create vertex data buffer
+	// Create GPU data buffer
 	SDL_GPUBuffer* buffer = SDL_CreateGPUBuffer(ctx->device, &(const SDL_GPUBufferCreateInfo)
 	{
-		.usage = SDL_GPU_BUFFERUSAGE_VERTEX,
-		.size = verticesSize
+		.usage = usage,
+		.size = size
 	});
 	if (!buffer)
 	{
@@ -478,11 +479,11 @@ SDL_GPUBuffer* NeHe_CreateVertexBuffer(NeHeContext* restrict ctx, const void* re
 		return false;
 	}
 
-	// Create vertex transfer buffer
+	// Create data transfer buffer
 	SDL_GPUTransferBuffer* xferBuffer = SDL_CreateGPUTransferBuffer(ctx->device, &(const SDL_GPUTransferBufferCreateInfo)
 	{
 		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-		.size = verticesSize
+		.size = size
 	});
 	if (!xferBuffer)
 	{
@@ -491,7 +492,7 @@ SDL_GPUBuffer* NeHe_CreateVertexBuffer(NeHeContext* restrict ctx, const void* re
 		return false;
 	}
 
-	// Map transfer buffer and copy the vertex data
+	// Map transfer buffer and copy the payload data
 	Uint8* map = SDL_MapGPUTransferBuffer(ctx->device, xferBuffer, false);
 	if (!map)
 	{
@@ -500,7 +501,7 @@ SDL_GPUBuffer* NeHe_CreateVertexBuffer(NeHeContext* restrict ctx, const void* re
 		SDL_ReleaseGPUBuffer(ctx->device, buffer);
 		return false;
 	}
-	SDL_memcpy(map, vertices, (size_t)verticesSize);
+	SDL_memcpy(map, data, (size_t)size);
 	SDL_UnmapGPUTransferBuffer(ctx->device, xferBuffer);
 
 	SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(ctx->device);
@@ -512,7 +513,7 @@ SDL_GPUBuffer* NeHe_CreateVertexBuffer(NeHeContext* restrict ctx, const void* re
 		return false;
 	}
 
-	// Upload the vertex & index data into the GPU buffer(s)
+	// Upload the data into the GPU buffer
 	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
 	SDL_UploadToGPUBuffer(pass, &(const SDL_GPUTransferBufferLocation)
 	{
@@ -522,7 +523,7 @@ SDL_GPUBuffer* NeHe_CreateVertexBuffer(NeHeContext* restrict ctx, const void* re
 	{
 		.buffer = buffer,
 		.offset = 0,
-		.size = verticesSize
+		.size = size
 	}, false);
 	SDL_EndGPUCopyPass(pass);
 	SDL_SubmitGPUCommandBuffer(cmd);

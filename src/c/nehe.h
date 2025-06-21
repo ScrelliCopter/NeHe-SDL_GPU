@@ -55,7 +55,8 @@ bool NeHe_LoadShaders(NeHeContext* restrict ctx,
 	SDL_GPUShader** restrict outFragment,
 	const char* restrict name,
 	const NeHeShaderProgramCreateInfo* restrict info);
-SDL_GPUBuffer* NeHe_CreateVertexBuffer(NeHeContext* restrict ctx, const void* restrict vertices, uint32_t verticesSize);
+SDL_GPUBuffer* NeHe_CreateBuffer(NeHeContext* restrict ctx, const void* restrict data, uint32_t size,
+	SDL_GPUBufferUsageFlags usage);
 bool NeHe_CreateVertexIndexBuffer(NeHeContext* restrict ctx,
 	SDL_GPUBuffer** restrict outVertexBuffer,
 	SDL_GPUBuffer** restrict outIndexBuffer,

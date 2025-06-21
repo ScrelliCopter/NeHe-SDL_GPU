@@ -231,7 +231,8 @@ static bool Lesson10_Init(NeHeContext* ctx)
 		return false;
 	}
 
-	if ((vtxBuffer = NeHe_CreateVertexBuffer(ctx, world.tris, sizeof(Triangle) * (uint32_t)world.numTriangles)) == NULL)
+	if ((vtxBuffer = NeHe_CreateBuffer(ctx, world.tris, sizeof(Triangle) * (uint32_t)world.numTriangles,
+		SDL_GPU_BUFFERUSAGE_VERTEX)) == NULL)
 	{
 		return false;
 	}
