@@ -8,38 +8,16 @@
 
 typedef struct
 {
-	float x, y, z;
-	float u, v;
-} Vertex;
-
-static const Vertex vertices[] =
-{
-	{ -1.0f, -1.0f, 0.0f,  0.0f, 0.0f },
-	{  1.0f, -1.0f, 0.0f,  1.0f, 0.0f },
-	{  1.0f,  1.0f, 0.0f,  1.0f, 1.0f },
-	{ -1.0f,  1.0f, 0.0f,  0.0f, 1.0f }
-};
-
-static const uint16_t indices[] =
-{
-	0,  1,  2,
-	2,  3,  0
-};
-
-static SDL_GPUGraphicsPipeline* pso = NULL;
-static SDL_GPUBuffer* vtxBuffer = NULL;
-static SDL_GPUBuffer* idxBuffer = NULL;
-static SDL_GPUTexture* texture = NULL;
-static SDL_GPUSampler* sampler = NULL;
-
-static SDL_GPUBuffer* instanceBuffer = NULL;
-static SDL_GPUTransferBuffer* instanceXferBuffer = NULL;
-
-typedef struct
-{
 	float model[16];
 	float color[4];
 } Instance;
+
+static SDL_GPUGraphicsPipeline* pso = NULL;
+static SDL_GPUBuffer* instanceBuffer = NULL;
+static SDL_GPUTransferBuffer* instanceXferBuffer = NULL;
+static SDL_GPUTexture* texture = NULL;
+static SDL_GPUSampler* sampler = NULL;
+
 
 static float projection[16];
 
@@ -67,65 +45,37 @@ static bool Lesson9_Init(NeHeContext* ctx)
 
 	const SDL_GPUVertexAttribute vertexAttribs[] =
 	{
-		// Mesh attributes
+		// Instance matrix attributes (one for each column)
 		{
 			.location = 0,
 			.buffer_slot = 0,
-			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
-			.offset = offsetof(Vertex, x)
-		},
-		{
-			.location = 1,
-			.buffer_slot = 0,
-			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
-			.offset = offsetof(Vertex, u)
-		},
-		// Instance matrix attributes (one for each column)
-		{
-			.location = 2,
-			.buffer_slot = 1,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
 			.offset = (uint32_t)offsetof(Instance, model)
 		},
 		{
-			.location = 3,
-			.buffer_slot = 1,
+			.location = 1,
+			.buffer_slot = 0,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
 			.offset = (uint32_t)offsetof(Instance, model[4])
 		},
 		{
-			.location = 4,
-			.buffer_slot = 1,
+			.location = 2,
+			.buffer_slot = 0,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
 			.offset = (uint32_t)offsetof(Instance, model[8])
 		},
 		{
-			.location = 5,
-			.buffer_slot = 1,
+			.location = 3,
+			.buffer_slot = 0,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
 			.offset = (uint32_t)offsetof(Instance, model[12])
 		},
 		// Instance colour
 		{
-			.location = 6,
-			.buffer_slot = 1,
+			.location = 4,
+			.buffer_slot = 0,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
 			.offset = offsetof(Instance, color)
-		}
-	};
-	const SDL_GPUVertexBufferDescription bufferDescriptors[] =
-	{
-		// Slot for mesh
-		{
-			.slot = 0,
-			.pitch = sizeof(Vertex),
-			.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX
-		},
-		// Slot for instances
-		{
-			.slot = 1,
-			.pitch = sizeof(Instance),
-			.input_rate = SDL_GPU_VERTEXINPUTRATE_INSTANCE
 		}
 	};
 	pso = SDL_CreateGPUGraphicsPipeline(ctx->device, &(const SDL_GPUGraphicsPipelineCreateInfo)
@@ -135,8 +85,13 @@ static bool Lesson9_Init(NeHeContext* ctx)
 		.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
 		.vertex_input_state =
 		{
-			.vertex_buffer_descriptions = bufferDescriptors,
-			.num_vertex_buffers = SDL_arraysize(bufferDescriptors),
+			.vertex_buffer_descriptions = &(const SDL_GPUVertexBufferDescription)
+			{
+				.slot = 0,
+				.pitch = sizeof(Instance),
+				.input_rate = SDL_GPU_VERTEXINPUTRATE_INSTANCE
+			},
+			.num_vertex_buffers = 1,
 			.vertex_attributes = vertexAttribs,
 			.num_vertex_attributes = SDL_arraysize(vertexAttribs)
 		},
@@ -189,13 +144,6 @@ static bool Lesson9_Init(NeHeContext* ctx)
 		return false;
 	}
 
-	if (!NeHe_CreateVertexIndexBuffer(ctx, &vtxBuffer, &idxBuffer,
-		vertices, sizeof(vertices),
-		indices, sizeof(indices)))
-	{
-		return false;
-	}
-
 	const int numStars = SDL_arraysize(stars);
 
 	instanceBuffer = SDL_CreateGPUBuffer(ctx->device, &(const SDL_GPUBufferCreateInfo)
@@ -237,8 +185,6 @@ static void Lesson9_Quit(NeHeContext* ctx)
 {
 	SDL_ReleaseGPUTransferBuffer(ctx->device, instanceXferBuffer);
 	SDL_ReleaseGPUBuffer(ctx->device, instanceBuffer);
-	SDL_ReleaseGPUBuffer(ctx->device, idxBuffer);
-	SDL_ReleaseGPUBuffer(ctx->device, vtxBuffer);
 	SDL_ReleaseGPUSampler(ctx->device, sampler);
 	SDL_ReleaseGPUTexture(ctx->device, texture);
 	SDL_ReleaseGPUGraphicsPipeline(ctx->device, pso);
@@ -336,21 +282,15 @@ static void Lesson9_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restri
 		.sampler = sampler
 	}, 1);
 
-	// Bind vertex, instance, and index buffers
-	const SDL_GPUBufferBinding vertexBindings[] =
+	// Bind instances buffer
+	SDL_BindGPUVertexBuffers(renderPass, 0, &(const SDL_GPUBufferBinding)
 	{
-		{ .buffer = vtxBuffer, .offset = 0 },
-		{ .buffer = instanceBuffer, .offset = 0 }
-	};
-	SDL_BindGPUVertexBuffers(renderPass, 0, vertexBindings, SDL_arraysize(vertexBindings));
-	SDL_BindGPUIndexBuffer(renderPass, &(const SDL_GPUBufferBinding)
-	{
-		.buffer = idxBuffer,
+		.buffer = instanceBuffer,
 		.offset = 0
-	}, SDL_GPU_INDEXELEMENTSIZE_16BIT);
+	}, 1);
 
 	SDL_PushGPUVertexUniformData(cmd, 0, projection, sizeof(projection));
-	SDL_DrawGPUIndexedPrimitives(renderPass, SDL_arraysize(indices), numInstances, 0, 0, 0);
+	SDL_DrawGPUPrimitives(renderPass, 6, numInstances, 0, 0);
 
 	SDL_EndGPURenderPass(renderPass);
 
