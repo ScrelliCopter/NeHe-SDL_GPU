@@ -39,21 +39,11 @@ extension Lesson9.Star
 
 struct Lesson9: AppDelegate
 {
-	struct Vertex
-	{
-		let position: SIMD3<Float>, texcoord: SIMD2<Float>
-
-		init(_ position: SIMD3<Float>, _ texcoord: SIMD2<Float>)
-		{
-			self.position = position
-			self.texcoord = texcoord
-		}
-	}
-
 	struct Instance
 	{
-		let model: simd_float4x4
-		let color: SIMD4<Float>
+		let position: SIMD3<Float>
+		let color: SIMD3<Float>
+		let angle: SIMD2<Float>
 	}
 
 	struct Star
@@ -63,23 +53,7 @@ struct Lesson9: AppDelegate
 		var color: SIMD3<UInt8>
 	}
 
-	static let vertices =
-	[
-		Vertex(.init(-1.0, -1.0, 0.0), .init(0.0, 0.0)),
-		Vertex(.init( 1.0, -1.0, 0.0), .init(1.0, 0.0)),
-		Vertex(.init( 1.0,  1.0, 0.0), .init(1.0, 1.0)),
-		Vertex(.init(-1.0,  1.0, 0.0), .init(0.0, 1.0)),
-	]
-
-	static let indices: [UInt16] =
-	[
-		0,  1,  2,
-		2,  3,  0,
-	]
-
 	var pso: OpaquePointer? = nil
-	var vtxBuffer: OpaquePointer? = nil
-	var idxBuffer: OpaquePointer? = nil
 	var instanceBuffer: OpaquePointer? = nil
 	var instanceXferBuffer: OpaquePointer? = nil
 	var sampler: OpaquePointer? = nil
@@ -108,65 +82,36 @@ struct Lesson9: AppDelegate
 
 		let vertexDescriptions: [SDL_GPUVertexBufferDescription] =
 		[
-			// Slot for mesh
 			SDL_GPUVertexBufferDescription(
 				slot: 0,
-				pitch: UInt32(MemoryLayout<Vertex>.stride),
-				input_rate: SDL_GPU_VERTEXINPUTRATE_VERTEX,
-				instance_step_rate: 0),
-			// Slot for instances
-			SDL_GPUVertexBufferDescription(
-				slot: 1,
 				pitch: UInt32(MemoryLayout<Instance>.stride),
 				input_rate: SDL_GPU_VERTEXINPUTRATE_INSTANCE,
 				instance_step_rate: 0),
 		]
 		let vertexAttributes: [SDL_GPUVertexAttribute] =
 		[
-			// Mesh attributes
 			SDL_GPUVertexAttribute(
 				location: 0,
 				buffer_slot: 0,
 				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
-				offset: UInt32(MemoryLayout<Vertex>.offset(of: \.position)!)),
+				offset: UInt32(MemoryLayout<Instance>.offset(of: \.position)!)),
 			SDL_GPUVertexAttribute(
 				location: 1,
 				buffer_slot: 0,
-				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
-				offset: UInt32(MemoryLayout<Vertex>.offset(of: \.texcoord)!)),
-			// Instance matrix attributes (one for each column)
+				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
+				offset: UInt32(MemoryLayout<Instance>.offset(of: \.color)!)),
 			SDL_GPUVertexAttribute(
 				location: 2,
-				buffer_slot: 1,
-				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-				offset: UInt32(MemoryLayout<Instance>.offset(of: \.model)!)),
-			SDL_GPUVertexAttribute(
-				location: 3,
-				buffer_slot: 1,
-				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-				offset: UInt32(MemoryLayout<Instance>.offset(of: \.model)!) + 16),
-			SDL_GPUVertexAttribute(
-				location: 4,
-				buffer_slot: 1,
-				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-				offset: UInt32(MemoryLayout<Instance>.offset(of: \.model)!) + 32),
-			SDL_GPUVertexAttribute(
-				location: 5,
-				buffer_slot: 1,
-				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-				offset: UInt32(MemoryLayout<Instance>.offset(of: \.model)!) + 48),
-			// Instance colour
-			SDL_GPUVertexAttribute(
-				location: 6,
-				buffer_slot: 1,
-				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-				offset: UInt32(MemoryLayout<Instance>.offset(of: \.color)!)),
+				buffer_slot: 0,
+				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
+				offset: UInt32(MemoryLayout<Instance>.offset(of: \.angle)!)),
 		]
 
 		var rasterizerDesc = SDL_GPURasterizerState()
 		rasterizerDesc.fill_mode  = SDL_GPU_FILLMODE_FILL
-		rasterizerDesc.cull_mode  = SDL_GPU_CULLMODE_NONE
-		rasterizerDesc.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE
+		rasterizerDesc.cull_mode  = SDL_GPU_CULLMODE_BACK
+		rasterizerDesc.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE  // Right-handed coordinates
+		rasterizerDesc.enable_depth_clip = true  // OpenGL-like clip behaviour
 
 		var colorTargets = [ SDL_GPUColorTargetDescription() ]
 		colorTargets[0].format = SDL_GetGPUSwapchainTextureFormat(ctx.device, ctx.window)
@@ -213,8 +158,6 @@ struct Lesson9: AppDelegate
 
 		try ctx.copyPass { (pass) throws(NeHeError) in
 			self.texture = try pass.createTextureFrom(bmpResource: "Star", flip: true, genMipmaps: false)
-			self.vtxBuffer = try pass.createBuffer(usage: SDL_GPU_BUFFERUSAGE_VERTEX, Self.vertices[...])
-			self.idxBuffer = try pass.createBuffer(usage: SDL_GPU_BUFFERUSAGE_INDEX, Self.indices[...])
 		}
 
 		let numStars = 50
@@ -250,8 +193,6 @@ struct Lesson9: AppDelegate
 	{
 		SDL_ReleaseGPUTransferBuffer(ctx.device, self.instanceXferBuffer)
 		SDL_ReleaseGPUBuffer(ctx.device, self.instanceBuffer)
-		SDL_ReleaseGPUBuffer(ctx.device, self.idxBuffer)
-		SDL_ReleaseGPUBuffer(ctx.device, self.vtxBuffer)
 		SDL_ReleaseGPUTexture(ctx.device, self.texture)
 		SDL_ReleaseGPUSampler(ctx.device, self.sampler)
 		SDL_ReleaseGPUGraphicsPipeline(ctx.device, self.pso)
@@ -275,23 +216,24 @@ struct Lesson9: AppDelegate
 			var instanceIDX = 0
 			for (starIDX, star) in self.stars.enumerated()
 			{
-				var model = simd_float4x4.translation(.init(0.0, 0.0, self.zoom))
-				model.rotate(angle:   self.tilt, axis: .init(1.0, 0.0, 0.0))
-				model.rotate(angle:  star.angle, axis: .init(0.0, 1.0, 0.0))
-				model.translate(.init(star.distance, 0.0, 0.0))
-				model.rotate(angle: -star.angle, axis: .init(0.0, 1.0, 0.0))
-				model.rotate(angle:  -self.tilt, axis: .init(1.0, 0.0, 0.0))
+				var theta = star.angle * (.pi / 180)
+				let position = star.distance * SIMD3<Float>(cos(theta), 0.0, -sin(theta))
 
 				if self.twinkle
 				{
 					let twinkleColor = stars[numStars - starIDX - 1].color
-					instances[instanceIDX] = Instance(model: model,
-						color: SIMD4(SIMD3<Float>(twinkleColor) / 255.0, 1.0))
+					instances[instanceIDX] = Instance(
+						position: position,
+						color: SIMD3<Float>(twinkleColor) / 255.0,
+						angle: .init(1.0, 0.0))
 					instanceIDX += 1
 				}
 
-				model.rotate(angle: self.spin, axis: .init(0.0, 0.0, 1.0))
-				instances[instanceIDX] = Instance(model: model, color: SIMD4(SIMD3(star.color) / 255.0, 1.0))
+				theta = self.spin * (.pi / 180)
+				instances[instanceIDX] = Instance(
+						position: position,
+						color: SIMD3(star.color) / 255.0,
+						angle: .init(cos(theta), sin(theta)))
 				instanceIDX += 1
 
 				self.spin += 0.01
@@ -329,22 +271,21 @@ struct Lesson9: AppDelegate
 		var textureBinding = SDL_GPUTextureSamplerBinding(texture: self.texture, sampler: self.sampler)
 		SDL_BindGPUFragmentSamplers(renderPass, 0, &textureBinding, 1)
 
-		// Bind vertex, instance, and index buffers
-		let vtxBindings =
-		[
-			SDL_GPUBufferBinding(buffer: self.vtxBuffer, offset: 0),
-			SDL_GPUBufferBinding(buffer: self.instanceBuffer, offset: 0),
-		]
-		var idxBinding = SDL_GPUBufferBinding(buffer: self.idxBuffer, offset: 0)
+		// Bind instance buffer
+		let vtxBindings = [ SDL_GPUBufferBinding(buffer: self.instanceBuffer, offset: 0) ]
 		SDL_BindGPUVertexBuffers(renderPass, 0,
 			vtxBindings.withUnsafeBufferPointer(\.baseAddress!), UInt32(vtxBindings.count))
-		SDL_BindGPUIndexBuffer(renderPass, &idxBinding, SDL_GPU_INDEXELEMENTSIZE_16BIT)
+
+		var view = simd_float4x4.translation(.init(0.0, 0.0, self.zoom))
+		view.rotate(angle: self.tilt, axis: .init(1.0, 0.0, 0.0))
 
 		// Push shader uniforms
-		SDL_PushGPUVertexUniformData(cmd, 0, &self.projection, UInt32(MemoryLayout<simd_float4x4>.size))
+		struct Uniform { var view: simd_float4x4, projection: simd_float4x4 }
+		var u = Uniform(view: view, projection: self.projection)
+		SDL_PushGPUVertexUniformData(cmd, 0, &u, UInt32(MemoryLayout<Uniform>.size))
 
 		// Draw star instances
-		SDL_DrawGPUIndexedPrimitives(renderPass, UInt32(Self.indices.count), UInt32(numInstances), 0, 0, 0)
+		SDL_DrawGPUPrimitives(renderPass, 6, UInt32(numInstances), 0, 0)
 
 		SDL_EndGPURenderPass(renderPass)
 

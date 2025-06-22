@@ -6,24 +6,16 @@
 #include <metal_stdlib>
 #include <simd/simd.h>
 
-struct Vertex
-{
-	float4 position;
-	float2 texCoord;
-};
-
 struct InstanceInput
 {
-	float4 model0 [[attribute(0)]];
-	float4 model1 [[attribute(1)]];
-	float4 model2 [[attribute(2)]];
-	float4 model3 [[attribute(3)]];
-	float4 color  [[attribute(4)]];
+	float3 position [[attribute(0)]];
+	float3 color [[attribute(1)]];
+	float2 angle [[attribute(2)]];
 };
 
 struct VertexUniform
 {
-	metal::float4x4 projection;
+	metal::float4x4 view, projection;
 };
 
 struct Vertex2Fragment
@@ -34,12 +26,12 @@ struct Vertex2Fragment
 };
 
 
-static constexpr constant Vertex quadVertices[4] =
+static constexpr constant float2 quadTexCoords[4] =
 {
-	{ .position = { -1.0f, -1.0f, 0.0f, 1.0f }, .texCoord = { 0.0f, 0.0f } },
-	{ .position = {  1.0f, -1.0f, 0.0f, 1.0f }, .texCoord = { 1.0f, 0.0f } },
-	{ .position = {  1.0f,  1.0f, 0.0f, 1.0f }, .texCoord = { 1.0f, 1.0f } },
-	{ .position = { -1.0f,  1.0f, 0.0f, 1.0f }, .texCoord = { 0.0f, 1.0f } }
+	{ 0.0f, 0.0f },
+	{ 1.0f, 0.0f },
+	{ 1.0f, 1.0f },
+	{ 0.0f, 1.0f }
 };
 
 static constexpr constant uint16_t quadIndices[6] =
@@ -53,14 +45,25 @@ vertex Vertex2Fragment VertexMain(
 	constant VertexUniform& u [[buffer(0)]],
 	uint vertexID [[vertex_id]])
 {
-	const auto model = metal::float4x4(in.model0, in.model1, in.model2, in.model3);
+	const float3 quadVertices[4] =
+	{
+		{ -in.angle.x + in.angle.y, -in.angle.x - in.angle.y, 0.0 },
+		{  in.angle.x + in.angle.y, -in.angle.x + in.angle.y, 0.0 },
+		{  in.angle.x - in.angle.y,  in.angle.x + in.angle.y, 0.0 },
+		{ -in.angle.x - in.angle.y,  in.angle.x - in.angle.y, 0.0 }
+	};
+
 	const auto quadIndex = quadIndices[vertexID];
-	const auto& quadVertex = quadVertices[quadIndex];
+
+	const auto invRot = transpose(metal::float3x3(u.view[0].xyz, u.view[1].xyz, u.view[2].xyz));
+	auto position = float4(invRot * quadVertices[quadIndex], 1.0);
+	position.xyz += in.position;
+	position.w = 1.0;
 
 	Vertex2Fragment out;
-	out.position = u.projection * model * quadVertex.position;
-	out.texCoord = quadVertex.texCoord;
-	out.color = half4(in.color);
+	out.position = u.projection * u.view * position;
+	out.texCoord = quadTexCoords[quadIndex];
+	out.color = half4(half3(in.color), 1.0);
 	return out;
 }
 

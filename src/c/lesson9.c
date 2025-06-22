@@ -8,8 +8,9 @@
 
 typedef struct
 {
-	float model[16];
-	float color[4];
+	float x, y, z;
+	float r, g, b;
+	float c, s;
 } Instance;
 
 static SDL_GPUGraphicsPipeline* pso = NULL;
@@ -45,37 +46,23 @@ static bool Lesson9_Init(NeHeContext* ctx)
 
 	const SDL_GPUVertexAttribute vertexAttribs[] =
 	{
-		// Instance matrix attributes (one for each column)
 		{
 			.location = 0,
 			.buffer_slot = 0,
-			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-			.offset = (uint32_t)offsetof(Instance, model)
+			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
+			.offset = (uint32_t)offsetof(Instance, x)
 		},
 		{
 			.location = 1,
 			.buffer_slot = 0,
-			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-			.offset = (uint32_t)offsetof(Instance, model[4])
+			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
+			.offset = (uint32_t)offsetof(Instance, r)
 		},
 		{
 			.location = 2,
 			.buffer_slot = 0,
-			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-			.offset = (uint32_t)offsetof(Instance, model[8])
-		},
-		{
-			.location = 3,
-			.buffer_slot = 0,
-			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-			.offset = (uint32_t)offsetof(Instance, model[12])
-		},
-		// Instance colour
-		{
-			.location = 4,
-			.buffer_slot = 0,
-			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-			.offset = offsetof(Instance, color)
+			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
+			.offset = (uint32_t)offsetof(Instance, c)
 		}
 	};
 	pso = SDL_CreateGPUGraphicsPipeline(ctx->device, &(const SDL_GPUGraphicsPipelineCreateInfo)
@@ -98,7 +85,7 @@ static bool Lesson9_Init(NeHeContext* ctx)
 		.rasterizer_state =
 		{
 			.fill_mode = SDL_GPU_FILLMODE_FILL,
-			.cull_mode = SDL_GPU_CULLMODE_NONE,
+			.cull_mode = SDL_GPU_CULLMODE_BACK,
 			.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE,  // Right-handed coordinates
 			.enable_depth_clip = true  // OpenGL-like clip behaviour
 		},
@@ -219,30 +206,32 @@ static void Lesson9_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restri
 		struct Star* star = &stars[i];
 		Instance* instance = &instances[instanceIdx];
 
-		Mtx_Translation(instance->model, 0.0f ,0.0f, zoom);
-		Mtx_Rotate(instance->model, tilt, 1.0f, 0.0f, 0.0f);
-		Mtx_Rotate(instance->model, star->angle, 0.0f, 1.0f, 0.0f);
-		Mtx_Translate(instance->model, star->distance, 0.0f, 0.0f);
-		Mtx_Rotate(instance->model, -star->angle, 0.0f, 1.0f, 0.0f);
-		Mtx_Rotate(instance->model, -tilt, 1.0f, 0.0f, 0.0f);
+		float theta = star->angle * (SDL_PI_F / 180.0f);
+
+		instance->x = star->distance * SDL_cosf(theta);
+		instance->y = 0.0f;
+		instance->z = star->distance * -SDL_sinf(theta);
 
 		if (twinkle)
 		{
-			instance->color[0] = (float)stars[numStars - i - 1].r / 255.0f;
-			instance->color[1] = (float)stars[numStars - i - 1].g / 255.0f;
-			instance->color[2] = (float)stars[numStars - i - 1].b / 255.0f;
-			instance->color[3] = 1.0f;
-			SDL_memcpy(instances[++instanceIdx].model, instance->model, sizeof(float) * 16);
+			instance->c = 1.0f;
+			instance->s = 0.0f;
+			instance->r = (float)stars[numStars - i - 1].r / 255.0f;
+			instance->g = (float)stars[numStars - i - 1].g / 255.0f;
+			instance->b = (float)stars[numStars - i - 1].b / 255.0f;
+			SDL_memcpy(&instances[++instanceIdx].x, &instance->x, sizeof(float) * 3);
 			instance = &instances[instanceIdx];
 		}
 
-		Mtx_Rotate(instance->model, spin, 0.0f, 0.0f, 1.0f);
-		instance->color[0] = (float)star->r / 255.0f;
-		instance->color[1] = (float)star->g / 255.0f;
-		instance->color[2] = (float)star->b / 255.0f;
-		instance->color[3] = 1.0f;
+		theta = spin * (SDL_PI_F / 180.0f);
+		instance->c = SDL_cosf(theta);
+		instance->s = SDL_sinf(theta);
+		instance->r = (float)star->r / 255.0f;
+		instance->g = (float)star->g / 255.0f;
+		instance->b = (float)star->b / 255.0f;
 
 		spin += 0.01f;
+
 		star->angle += (float)i / (float)numStars;
 		star->distance -= 0.01f;
 		if (star->distance < 0.0f)
@@ -289,7 +278,13 @@ static void Lesson9_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restri
 		.offset = 0
 	}, 1);
 
-	SDL_PushGPUVertexUniformData(cmd, 0, projection, sizeof(projection));
+	// Push matrix uniforms
+	struct Uniform { float view[16], projection[16]; } u;
+	Mtx_Translation(u.view, 0.0f ,0.0f, zoom);
+	Mtx_Rotate(u.view, tilt, 1.0f, 0.0f, 0.0f);
+	SDL_memcpy(u.projection, projection, sizeof(projection));
+	SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(u));
+
 	SDL_DrawGPUPrimitives(renderPass, 6, numInstances, 0, 0);
 
 	SDL_EndGPURenderPass(renderPass);

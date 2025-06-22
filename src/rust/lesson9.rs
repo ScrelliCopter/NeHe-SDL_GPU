@@ -18,20 +18,14 @@ use std::cmp::max;
 use std::ffi::c_void;
 use std::mem::offset_of;
 use std::process::ExitCode;
-use std::ptr::{null, null_mut};
-
-#[repr(C)]
-struct Vertex
-{
-	x: f32, y: f32, z: f32,
-	u: f32, v: f32,
-}
+use std::ptr::{addr_of, null, null_mut};
 
 #[repr(C)]
 struct Instance
 {
-	model: Mtx,
-	color: [f32; 4],
+	x: f32, y: f32, z: f32,
+	color: [f32; 3],
+	c: f32, s: f32
 }
 
 #[derive(Default, Copy, Clone)]
@@ -65,13 +59,12 @@ impl Star
 		}
 	}
 
-	fn color_rgba_f32(&self) -> [f32; 4]
+	fn color_rgb_f32(&self) -> [f32; 3]
 	{
 		[
 			self.color[0] as f32 / 255.0,
 			self.color[1] as f32 / 255.0,
 			self.color[2] as f32 / 255.0,
-			1.0,
 		]
 	}
 
@@ -87,25 +80,9 @@ impl Star
 	fn coeff(star_id: usize, num_stars: usize) -> f32 { star_id as f32 / num_stars as f32 }
 }
 
-const VERTICES: &'static [Vertex] =
-&[
-	Vertex { x: -1.0, y: -1.0, z: 0.0, u: 0.0, v: 0.0 },
-	Vertex { x:  1.0, y: -1.0, z: 0.0, u: 1.0, v: 0.0 },
-	Vertex { x:  1.0, y:  1.0, z: 0.0, u: 1.0, v: 1.0 },
-	Vertex { x: -1.0, y:  1.0, z: 0.0, u: 0.0, v: 1.0 },
-];
-
-const INDICES: &'static [u16] =
-&[
-	0,  1,  2,
-	2,  3,  0,
-];
-
 struct Lesson9
 {
 	pso: *mut SDL_GPUGraphicsPipeline,
-	vtx_buffer: *mut SDL_GPUBuffer,
-	idx_buffer: *mut SDL_GPUBuffer,
 	instance_buffer: *mut SDL_GPUBuffer,
 	instance_xfer_buffer: *mut SDL_GPUTransferBuffer,
 	sampler: *mut SDL_GPUSampler,
@@ -130,8 +107,6 @@ impl Default for Lesson9
 		Self
 		{
 			pso: null_mut(),
-			vtx_buffer: null_mut(),
-			idx_buffer: null_mut(),
 			instance_buffer: null_mut(),
 			instance_xfer_buffer: null_mut(),
 			sampler: null_mut(),
@@ -163,18 +138,9 @@ impl AppImplementation for Lesson9
 
 		const VERTEX_DESCRIPTIONS: &'static [SDL_GPUVertexBufferDescription] =
 		&[
-			// Slot for mesh
 			SDL_GPUVertexBufferDescription
 			{
 				slot: 0,
-				pitch: size_of::<Vertex>() as u32,
-				input_rate: SDL_GPU_VERTEXINPUTRATE_VERTEX,
-				instance_step_rate: 0,
-			},
-			// Slot for instances
-			SDL_GPUVertexBufferDescription
-			{
-				slot: 1,
 				pitch: size_of::<Instance>() as u32,
 				input_rate: SDL_GPU_VERTEXINPUTRATE_INSTANCE,
 				instance_step_rate: 0,
@@ -182,57 +148,26 @@ impl AppImplementation for Lesson9
 		];
 		const VERTEX_ATTRIBS: &'static [SDL_GPUVertexAttribute] =
 		&[
-			// Mesh attributes
 			SDL_GPUVertexAttribute
 			{
 				location: 0,
 				buffer_slot: 0,
 				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
-				offset: offset_of!(Vertex, x) as u32,
+				offset: offset_of!(Instance, x) as u32,
 			},
 			SDL_GPUVertexAttribute
 			{
 				location: 1,
 				buffer_slot: 0,
-				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
-				offset: offset_of!(Vertex, u) as u32,
+				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
+				offset: offset_of!(Instance, color) as u32,
 			},
-			// Instance matrix attributes (one for each column)
 			SDL_GPUVertexAttribute
 			{
 				location: 2,
-				buffer_slot: 1,
-				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-				offset: offset_of!(Instance, model) as u32,
-			},
-			SDL_GPUVertexAttribute
-			{
-				location: 3,
-				buffer_slot: 1,
-				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-				offset: offset_of!(Instance, model) as u32 + 16,
-			},
-			SDL_GPUVertexAttribute
-			{
-				location: 4,
-				buffer_slot: 1,
-				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-				offset: offset_of!(Instance, model) as u32 + 32,
-			},
-			SDL_GPUVertexAttribute
-			{
-				location: 5,
-				buffer_slot: 1,
-				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-				offset: offset_of!(Instance, model) as u32 + 48,
-			},
-			// Instance colour
-			SDL_GPUVertexAttribute
-			{
-				location: 6,
-				buffer_slot: 1,
-				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-				offset: offset_of!(Instance, color) as u32,
+				buffer_slot: 0,
+				format: SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
+				offset: offset_of!(Instance, c) as u32,
 			},
 		];
 
@@ -250,8 +185,9 @@ impl AppImplementation for Lesson9
 		};
 
 		pso_info.rasterizer_state.fill_mode  = SDL_GPU_FILLMODE_FILL;
-		pso_info.rasterizer_state.cull_mode  = SDL_GPU_CULLMODE_NONE;
-		pso_info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
+		pso_info.rasterizer_state.cull_mode  = SDL_GPU_CULLMODE_BACK;
+		pso_info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;  // Right-handed coordinates
+		pso_info.rasterizer_state.enable_depth_clip = true;  // OpenGL-like clip behaviour
 
 		let mut color_targets = [ SDL_GPUColorTargetDescription::default() ];
 		color_targets[0].format = unsafe { SDL_GetGPUSwapchainTextureFormat(ctx.device, ctx.window) };
@@ -278,8 +214,6 @@ impl AppImplementation for Lesson9
 		ctx.copy_pass(|pass|
 		{
 			self.texture = pass.load_texture("Data/Star.bmp", true, false)?;
-			self.vtx_buffer = pass.create_buffer(SDL_GPU_BUFFERUSAGE_VERTEX, VERTICES)?;
-			self.idx_buffer = pass.create_buffer(SDL_GPU_BUFFERUSAGE_INDEX, INDICES)?;
 			Ok(())
 		})?;
 
@@ -322,8 +256,6 @@ impl AppImplementation for Lesson9
 		{
 			SDL_ReleaseGPUTransferBuffer(ctx.device, self.instance_xfer_buffer);
 			SDL_ReleaseGPUBuffer(ctx.device, self.instance_buffer);
-			SDL_ReleaseGPUBuffer(ctx.device, self.idx_buffer);
-			SDL_ReleaseGPUBuffer(ctx.device, self.vtx_buffer);
 			SDL_ReleaseGPUTexture(ctx.device, self.texture);
 			SDL_ReleaseGPUSampler(ctx.device, self.sampler);
 			SDL_ReleaseGPUGraphicsPipeline(ctx.device, self.pso);
@@ -352,22 +284,29 @@ impl AppImplementation for Lesson9
 		{
 			let mut star = self.stars[star_idx];
 
-			let mut model = Mtx::translation(0.0, 0.0, self.zoom);
-			model.rotate(  self.tilt, 1.0, 0.0, 0.0);
-			model.rotate( star.angle, 0.0, 1.0, 0.0);
-			model.translate(star.distance, 0.0, 0.0);
-			model.rotate(-star.angle, 0.0, 1.0, 0.0);
-			model.rotate( -self.tilt, 1.0, 0.0, 0.0);
+			let mut theta = star.angle.to_radians();
+			let x = star.distance * theta.cos();
+			let z = star.distance * -theta.sin();
 
 			if self.twinkle
 			{
-				let twinkle_color = self.stars[num_stars - star_idx - 1].color_rgba_f32();
-				instances[instance_idx] = Instance { model, color: twinkle_color };
+				let twinkle_color = self.stars[num_stars - star_idx - 1].color_rgb_f32();
+				instances[instance_idx] = Instance
+				{
+					x, y: 0.0, z,
+					color: twinkle_color,
+					c: 1.0, s: 0.0,
+				};
 				instance_idx += 1;
 			}
 
-			model.rotate(self.spin, 0.0, 0.0, 1.0);
-			instances[instance_idx] = Instance { model, color: star.color_rgba_f32() };
+			theta = self.spin.to_radians();
+			instances[instance_idx] = Instance
+			{
+				x, y: 0.0, z,
+				color: star.color_rgb_f32(),
+				c: theta.cos(), s: theta.sin(),
+			};
 			instance_idx += 1;
 
 			self.spin += 0.01;
@@ -413,20 +352,20 @@ impl AppImplementation for Lesson9
 			SDL_BindGPUFragmentSamplers(render_pass, 0, &texture_binding, 1);
 
 			// Bind vertex, instance, and index buffers
-			let vtx_bindings =
-			[
-				SDL_GPUBufferBinding { buffer: self.vtx_buffer, offset: 0 },
-				SDL_GPUBufferBinding { buffer: self.instance_buffer, offset: 0 },
-			];
-			let idx_binding = SDL_GPUBufferBinding { buffer: self.idx_buffer, offset: 0 };
+			let vtx_bindings = [ SDL_GPUBufferBinding { buffer: self.instance_buffer, offset: 0 } ];
 			SDL_BindGPUVertexBuffers(render_pass, 0, vtx_bindings.as_ptr(), vtx_bindings.len() as u32);
-			SDL_BindGPUIndexBuffer(render_pass, &idx_binding, SDL_GPU_INDEXELEMENTSIZE_16BIT);
+
+			let mut view = Mtx::translation(0.0, 0.0, self.zoom);
+			view.rotate(  self.tilt, 1.0, 0.0, 0.0);
 
 			// Push shader uniforms
-			SDL_PushGPUVertexUniformData(cmd, 0, self.projection.as_ptr() as *mut c_void, size_of::<Mtx>() as u32);
+			#[allow(dead_code)]
+			struct Uniform { view: Mtx, projection: Mtx }
+			let u = Uniform { view, projection: self.projection };
+			SDL_PushGPUVertexUniformData(cmd, 0, addr_of!(u) as *const c_void, size_of::<Uniform>() as u32);
 
 			// Draw star instances
-			SDL_DrawGPUIndexedPrimitives(render_pass, INDICES.len() as u32, num_instances as u32, 0, 0, 0);
+			SDL_DrawGPUPrimitives(render_pass, 6, num_instances as u32, 0, 0);
 
 			SDL_EndGPURenderPass(render_pass);
 		}
