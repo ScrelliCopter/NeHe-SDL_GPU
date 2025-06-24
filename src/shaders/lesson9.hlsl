@@ -39,21 +39,21 @@ static const min12int quadIndices[6] =
 
 Vertex2Pixel VertexMain(uint vertexID : SV_VertexID, InstanceInput input)
 {
-	const float3 quadVertices[4] =
+	const float2 quadVertices[4] =
 	{
-		{ -input.angle.x + input.angle.y, -input.angle.x - input.angle.y, 0.0 },
-		{  input.angle.x + input.angle.y, -input.angle.x + input.angle.y, 0.0 },
-		{  input.angle.x - input.angle.y,  input.angle.x + input.angle.y, 0.0 },
-		{ -input.angle.x - input.angle.y,  input.angle.x - input.angle.y, 0.0 }
+		{ -input.angle.x + input.angle.y, -input.angle.x - input.angle.y },
+		{  input.angle.x + input.angle.y, -input.angle.x + input.angle.y },
+		{  input.angle.x - input.angle.y,  input.angle.x + input.angle.y },
+		{ -input.angle.x - input.angle.y,  input.angle.x - input.angle.y }
 	};
 
 	const uint quadIndex = quadIndices[vertexID];
 
-	float3 position = mul(transpose((float3x3)ubo.view), quadVertices[quadIndex]);
-	position += input.position;
+	float4 position = mul(ubo.view, float4(input.position, 1.0));
+	position.xy += quadVertices[quadIndex];
 
 	Vertex2Pixel output;
-	output.position = mul(ubo.projection, mul(ubo.view, float4(position, 1.0)));
+	output.position = mul(ubo.projection, position);
 	output.color = half4(input.color, 1.0);
 	output.texcoord = quadTexCoords[quadIndex];
 	return output;

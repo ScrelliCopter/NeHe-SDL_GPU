@@ -45,23 +45,21 @@ vertex Vertex2Fragment VertexMain(
 	constant VertexUniform& u [[buffer(0)]],
 	uint vertexID [[vertex_id]])
 {
-	const float3 quadVertices[4] =
+	const float2 quadVertices[4] =
 	{
-		{ -in.angle.x + in.angle.y, -in.angle.x - in.angle.y, 0.0 },
-		{  in.angle.x + in.angle.y, -in.angle.x + in.angle.y, 0.0 },
-		{  in.angle.x - in.angle.y,  in.angle.x + in.angle.y, 0.0 },
-		{ -in.angle.x - in.angle.y,  in.angle.x - in.angle.y, 0.0 }
+		{ -in.angle.x + in.angle.y, -in.angle.x - in.angle.y },
+		{  in.angle.x + in.angle.y, -in.angle.x + in.angle.y },
+		{  in.angle.x - in.angle.y,  in.angle.x + in.angle.y },
+		{ -in.angle.x - in.angle.y,  in.angle.x - in.angle.y }
 	};
 
 	const auto quadIndex = quadIndices[vertexID];
 
-	const auto invRot = transpose(metal::float3x3(u.view[0].xyz, u.view[1].xyz, u.view[2].xyz));
-	auto position = float4(invRot * quadVertices[quadIndex], 1.0);
-	position.xyz += in.position;
-	position.w = 1.0;
+	auto position = u.view * float4(in.position, 1.0);
+	position.xy += quadVertices[quadIndex];
 
 	Vertex2Fragment out;
-	out.position = u.projection * u.view * position;
+	out.position = u.projection * position;
 	out.texCoord = quadTexCoords[quadIndex];
 	out.color = half4(half3(in.color), 1.0);
 	return out;
