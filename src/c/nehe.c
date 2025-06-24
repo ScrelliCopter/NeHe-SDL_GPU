@@ -159,10 +159,11 @@ SDL_GPUTexture* NeHe_LoadTexture(NeHeContext* restrict ctx, const char* const re
 	return texture;
 }
 
-static SDL_GPUTexture* CreateTextureFromPixels(SDL_GPUDevice* restrict device,
-	const void* restrict data, size_t dataSize, const SDL_GPUTextureCreateInfo* restrict createInfo, bool genMipmaps)
+SDL_GPUTexture* NeHe_CreateGPUTextureFromPixels(NeHeContext* restrict ctx, const void* restrict data,
+	size_t dataSize, const SDL_GPUTextureCreateInfo* const restrict createInfo, bool genMipmaps)
 {
 	SDL_assert(dataSize <= UINT32_MAX);
+	SDL_GPUDevice* device = ctx->device;
 
 	SDL_GPUTexture* texture = SDL_CreateGPUTexture(device, createInfo);
 	if (!texture)
@@ -288,7 +289,7 @@ SDL_GPUTexture* NeHe_CreateGPUTextureFromSurface(NeHeContext* restrict ctx, cons
 		info.num_levels = (Uint32)SDL_MostSignificantBitIndex32(SDL_max(info.width, info.height)) + 1;
 	}
 
-	SDL_GPUTexture* texture = CreateTextureFromPixels(ctx->device, data, dataSize, &info, genMipmaps);
+	SDL_GPUTexture* texture = NeHe_CreateGPUTextureFromPixels(ctx, data, dataSize, &info, genMipmaps);
 	SDL_DestroySurface(conv);
 	return texture;
 }
@@ -337,8 +338,20 @@ static char* ReadBlob(const char* const restrict path, size_t* restrict outLengt
 		return NULL;
 	}
 
-	*outLength = (size_t)size;
+	if (outLength)
+	{
+		*outLength = (size_t)size;
+	}
 	return data;
+}
+
+void* NeHe_ReadResourceBlob(const NeHeContext* restrict ctx,
+	const char* const restrict resourcePath, size_t* restrict outLength)
+{
+	char* path = NeHe_ResourcePath(ctx, resourcePath);
+	void* result = ReadBlob(path, outLength);
+	SDL_free(path);
+	return result;
 }
 
 static SDL_GPUShader* LoadShaderBlob(NeHeContext* restrict ctx,

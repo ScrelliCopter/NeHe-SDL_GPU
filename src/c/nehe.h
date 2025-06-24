@@ -54,10 +54,15 @@ inline SDL_IOStream* NeHe_OpenResource(const NeHeContext* restrict ctx,
 	SDL_free(path);
 	return file;
 }
+void* NeHe_ReadResourceBlob(const NeHeContext* restrict ctx,
+	const char* const restrict resourcePath,
+	size_t* restrict outLength);
 SDL_GPUTexture* NeHe_LoadTexture(NeHeContext* restrict ctx, const char* restrict resourcePath,
 	bool flipVertical, bool genMipmaps);
-SDL_GPUTexture* NeHe_CreateGPUTextureFromSurface(NeHeContext* restrict ctx, const SDL_Surface* restrict surface,
-	bool genMipmaps);
+SDL_GPUTexture* NeHe_CreateGPUTextureFromSurface(NeHeContext* restrict ctx,
+	const SDL_Surface* restrict surface, bool genMipmaps);
+SDL_GPUTexture* NeHe_CreateGPUTextureFromPixels(NeHeContext* restrict ctx, const void* restrict data,
+	size_t dataSize, const SDL_GPUTextureCreateInfo* restrict createInfo, bool genMipmaps);
 bool NeHe_LoadShaders(NeHeContext* restrict ctx,
 	SDL_GPUShader** restrict outVertex,
 	SDL_GPUShader** restrict outFragment,
