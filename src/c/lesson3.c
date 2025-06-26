@@ -132,9 +132,10 @@ static void Lesson3_Resize(NeHeContext* restrict ctx, int width, int height)
 	Mtx_Perspective(projection, 45.0f, (float)width / (float)height, 0.1f, 100.0f);
 }
 
-static void Lesson3_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restrict cmd, SDL_GPUTexture* restrict swapchain)
+static void Lesson3_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restrict cmd,
+	SDL_GPUTexture* restrict swapchain, unsigned swapchainW, unsigned swapchainH)
 {
-	(void)ctx;
+	(void)ctx; (void)swapchainW; (void)swapchainH;
 
 	const SDL_GPUColorTargetInfo colorInfo =
 	{

@@ -15,7 +15,8 @@ extern const struct AppConfig
 	bool (*init)(struct NeHeContext*);
 	void (*quit)(struct NeHeContext*);
 	void (*resize)(struct NeHeContext*, int width, int height);
-	void (*draw)(struct NeHeContext* restrict, SDL_GPUCommandBuffer* restrict, SDL_GPUTexture* restrict);
+	void (*draw)(struct NeHeContext* restrict, SDL_GPUCommandBuffer* restrict,
+		SDL_GPUTexture* restrict, unsigned, unsigned);
 	void (*key)(struct NeHeContext*, SDL_Keycode, bool down, bool repeat);
 } appConfig;
 

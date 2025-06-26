@@ -109,7 +109,7 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
 
 	if (appConfig.draw)
 	{
-		appConfig.draw(ctx, cmdbuf, swapchainTex);
+		appConfig.draw(ctx, cmdbuf, swapchainTex, (unsigned)swapchainWidth, (unsigned)swapchainHeight);
 	}
 
 	SDL_SubmitGPUCommandBuffer(cmdbuf);

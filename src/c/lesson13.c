@@ -134,7 +134,8 @@ static void Lesson13_Resize(NeHeContext* restrict ctx, int width, int height)
 	Mtx_Perspective(projection, 45.0f, (float)width / (float)height, 0.1f, 100.0f);
 }
 
-static void Lesson13_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restrict cmd, SDL_GPUTexture* restrict swapchain)
+static void Lesson13_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restrict cmd,
+	SDL_GPUTexture* restrict swapchain, unsigned w, unsigned h)
 {
 	(void)ctx;
 
@@ -156,7 +157,7 @@ static void Lesson13_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	float b = 1.0f - 0.5f * SDL_cosf(counter1 + counter2);
 
 	float rasterX = -0.45f + 0.05f * SDL_cosf(counter1);
-	float rasterY = 0.35f * SDL_sinf(counter2);
+	float rasterY = 0.32f * SDL_sinf(counter2);
 
 	SDL_EndGPURenderPass(pass);
 
