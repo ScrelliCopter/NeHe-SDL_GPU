@@ -46,6 +46,8 @@ inline void Mtx_Orthographic2D(float m[16], float left, float right, float botto
 }
 
 void Mtx_Multiply(float m[16], const float l[16], const float r[16]);
+void Mtx_VectorProduct(float v[4], const float l[16], const float r[4]);
+void Mtx_VectorProject(float v[4], const float l[16], const float r[4]);
 
 void Mtx_Translate(float m[16], float x, float y, float z);
 void Mtx_Scale(float m[16], float x, float y, float z);

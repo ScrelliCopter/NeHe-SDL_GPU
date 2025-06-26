@@ -116,6 +116,23 @@ void Mtx_Multiply(float m[16], const float l[16], const float r[16])
 	}
 }
 
+void Mtx_VectorProduct(float v[4], const float l[16], const float r[4])
+{
+	v[0] = l[0]  * r[0] + l[1]  * r[1] + l[2]  * r[2] + l[3]  * r[3];
+	v[1] = l[4]  * r[0] + l[5]  * r[1] + l[6]  * r[2] + l[7]  * r[3];
+	v[2] = l[8]  * r[0] + l[9]  * r[1] + l[10] * r[2] + l[11] * r[3];
+	v[3] = l[12] * r[0] + l[13] * r[1] + l[14] * r[2] + l[15] * r[3];
+}
+
+void Mtx_VectorProject(float v[4], const float l[16], const float r[4])
+{
+	const float w = l[3] * r[0] + l[7] * r[1] + l[11] * r[2] + l[15] * r[3], iw = 1.0f / w;
+	v[0] = (l[0] * r[0] + l[4] * r[1] + l[8]  * r[2] + l[12] * r[3]) * iw;
+	v[1] = (l[1] * r[0] + l[5] * r[1] + l[9]  * r[2] + l[13] * r[3]) * iw;
+	v[2] = (l[2] * r[0] + l[6] * r[1] + l[10] * r[2] + l[14] * r[3]) * iw;
+	v[3] = w * iw;
+}
+
 void Mtx_Translate(float m[16], float x, float y, float z)
 {
 	/*
