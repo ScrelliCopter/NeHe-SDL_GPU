@@ -79,6 +79,26 @@ void Mtx_Perspective(float m[16], float fovy, float aspect, float near, float fa
 	m[11] = -1.0f;
 }
 
+void Mtx_Orthographic(float m[16], float left, float right, float bottom, float top, float near, float far)
+{
+	/*
+	  [w 0 0 x]
+	  [0 h 0 y]
+	  [0 0 d z]
+	  [0 0 0 1]
+	*/
+	m[1] = m[2] = m[3] = m[4] = m[6] = m[7] = m[8] = m[9] = m[11] = 0.0f;
+	m[0]  = 2.0f / (right - left);
+	m[5]  = 2.0f / (top - bottom);
+	m[10] = 1.0f / (far - near);
+	m[12] = -(right + left) / (right - left);
+	m[13] = -(top + bottom) / (top - bottom);
+	m[14] = -near / (far - near);
+	m[15] = 1.0f;
+}
+
+extern inline void Mtx_Orthographic2D(float m[16], float left, float right, float bottom, float top);
+
 void Mtx_Multiply(float m[16], const float l[16], const float r[16])
 {
 	int i = 0;

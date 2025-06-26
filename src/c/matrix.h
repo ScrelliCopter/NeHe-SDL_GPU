@@ -38,6 +38,12 @@ inline void Mtx_Scaled(float m[16], float x, float y, float z)
 
 void Mtx_Rotation(float m[16], float angle, float x, float y, float z);
 void Mtx_Perspective(float m[16], float fovy, float aspect, float near, float far);
+void Mtx_Orthographic(float m[16], float left, float right, float bottom, float top, float near, float far);
+
+inline void Mtx_Orthographic2D(float m[16], float left, float right, float bottom, float top)
+{
+	Mtx_Orthographic(m, left, right, bottom, top, -1.0f, 1.0f);
+}
 
 void Mtx_Multiply(float m[16], const float l[16], const float r[16]);
 
