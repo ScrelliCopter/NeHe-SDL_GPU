@@ -299,16 +299,16 @@ static void Lesson13_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	};
 
 	// Position text in screen coordinates (Y-up)
-	float view[16], textScreenPos[4];
+	float model[16], textScreenPos[4];
 	Mtx_VectorProject(textScreenPos, perspective, textWorldPos);
-	Mtx_Translation(view,
+	Mtx_Translation(model,
 		floorf((float)w * (textScreenPos[0] + 1.0f) / 2.0f),
 		floorf((float)h * (textScreenPos[1] + 1.0f) / 2.0f),
 		0.0f);
 
 	// Push matrix uniforms
-	struct Uniform { float viewProj[16], color[4]; } u;
-	Mtx_Multiply(u.viewProj, ortho, view);
+	struct Uniform { float modelViewProj[16], color[4]; } u;
+	Mtx_Multiply(u.modelViewProj, ortho, model);
 	SDL_memcpy(u.color, (float[4]){ r, g, b, 1.0f }, sizeof(u.color));
 	SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(u));
 

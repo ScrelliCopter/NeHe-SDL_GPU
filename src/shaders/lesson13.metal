@@ -13,7 +13,7 @@ struct CharacterInput
 
 struct VertexUniform
 {
-	metal::float4x4 viewProj;
+	metal::float4x4 modelViewProj;
 	float4 color;
 };
 
@@ -32,7 +32,7 @@ vertex Vertex2Fragment VertexMain(
 	const auto offset = float2(vertexID >> 1, vertexID & 0x1);
 
 	Vertex2Fragment out;
-	out.position = u.viewProj * float4(in.dst.xy + in.dst.zw * offset, 0.0, 1.0);
+	out.position = u.modelViewProj * float4(in.dst.xy + in.dst.zw * offset, 0.0, 1.0);
 	out.texCoord = in.src.xy + in.src.zw * offset;
 	out.color = half4(u.color);
 	return out;
