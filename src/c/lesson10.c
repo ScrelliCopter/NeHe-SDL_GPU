@@ -40,7 +40,7 @@ static SDL_GPUSampler* samplers[3] = { NULL, NULL, NULL };
 static bool blend = false;
 static unsigned filter = 0;
 
-static float projection[16];
+static Mtx projection;
 static Camera camera =
 {
 	.x = 0.0f, .z = 0.0f,
@@ -260,7 +260,7 @@ static void Lesson10_Resize(NeHeContext* ctx, int width, int height)
 	// Avoid division by zero by clamping height
 	height = SDL_max(height, 1);
 	// Recalculate projection matrix
-	Mtx_Perspective(projection, 45.0f, (float)width / (float)height, 0.1f, 100.0f);
+	projection = Mtx_Perspective(45.0f, (float)width / (float)height, 0.1f, 100.0f);
 }
 
 static void Lesson10_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restrict cmd,
@@ -306,15 +306,13 @@ static void Lesson10_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	}, 1);
 
 	// Setup the camera view matrix
-	float modelView[16];
-	Mtx_Rotation(modelView, camera.pitch, 1.0f, 0.0f, 0.0f);
-	Mtx_Rotate(modelView, 360.0f - camera.yaw, 0.0f, 1.0f, 0.0f);
-	Mtx_Translate(modelView, -camera.x, -(0.25f + camera.walkBob), -camera.z);
+	Mtx modelView = Mtx_Rotation(camera.pitch, 1.0f, 0.0f, 0.0f);
+	Mtx_Rotate(&modelView, 360.0f - camera.yaw, 0.0f, 1.0f, 0.0f);
+	Mtx_Translate(&modelView, -camera.x, -(0.25f + camera.walkBob), -camera.z);
 
 	// Push shader uniforms
-	float modelViewProj[16];
-	Mtx_Multiply(modelViewProj, projection, modelView);
-	SDL_PushGPUVertexUniformData(cmd, 0, &modelViewProj, sizeof(modelViewProj));
+	Mtx modelViewProj = Mtx_Multiply(&projection, &modelView);
+	SDL_PushGPUVertexUniformData(cmd, 0, &modelViewProj, sizeof(Mtx));
 
 	// Draw world
 	SDL_DrawGPUPrimitives(pass, 3u * (uint32_t)world.numTriangles, 1, 0, 0);

@@ -68,7 +68,7 @@ static SDL_GPUGraphicsPipeline* pso = NULL;
 static SDL_GPUBuffer* vtxBuffer = NULL;
 static SDL_GPUBuffer* idxBuffer = NULL;
 
-static float projection[16];
+static Mtx projection;
 
 static float rotTri = 0.0f;
 static float rotQuad = 0.0f;
@@ -170,7 +170,7 @@ static void Lesson5_Resize(NeHeContext* restrict ctx, int width, int height)
 	// Avoid division by zero by clamping height
 	height = SDL_max(height, 1);
 	// Recalculate projection matrix
-	Mtx_Perspective(projection, 45.0f, (float)width / (float)height, 0.1f, 100.0f);
+	projection = Mtx_Perspective(45.0f, (float)width / (float)height, 0.1f, 100.0f);
 }
 
 static void Lesson5_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restrict cmd,
@@ -213,20 +213,18 @@ static void Lesson5_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restri
 		.offset = 0
 	}, SDL_GPU_INDEXELEMENTSIZE_16BIT);
 
-	float model[16], viewproj[16];
-
 	// Draw triangle 1.5 units to the left and 6 units into the camera
-	Mtx_Translation(model, -1.5f, 0.0f, -6.0f);
-	Mtx_Rotate(model, rotTri, 0.0f, 1.0f, 0.0f);
-	Mtx_Multiply(viewproj, projection, model);
-	SDL_PushGPUVertexUniformData(cmd, 0, viewproj, sizeof(viewproj));
+	Mtx model = Mtx_Translation(-1.5f, 0.0f, -6.0f);
+	Mtx_Rotate(&model, rotTri, 0.0f, 1.0f, 0.0f);
+	Mtx viewProj = Mtx_Multiply(&projection, &model);
+	SDL_PushGPUVertexUniformData(cmd, 0, &viewProj, sizeof(Mtx));
 	SDL_DrawGPUIndexedPrimitives(pass, 12, 1, 0, 0, 0);
 
 	// Draw quad 1.5 units to the right and 7 units into the camera
-	Mtx_Translation(model, 1.5f, 0.0f, -7.0f);
-	Mtx_Rotate(model, rotQuad, 1.0f, 1.0f, 1.0f);
-	Mtx_Multiply(viewproj, projection, model);
-	SDL_PushGPUVertexUniformData(cmd, 0, viewproj, sizeof(viewproj));
+	model = Mtx_Translation(1.5f, 0.0f, -7.0f);
+	Mtx_Rotate(&model, rotQuad, 1.0f, 1.0f, 1.0f);
+	viewProj = Mtx_Multiply(&projection, &model);
+	SDL_PushGPUVertexUniformData(cmd, 0, &viewProj, sizeof(Mtx));
 	SDL_DrawGPUIndexedPrimitives(pass, 36, 1, 12, 0, 0);
 
 	SDL_EndGPURenderPass(pass);

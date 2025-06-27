@@ -4,11 +4,13 @@
  */
 
 #include "matrix.h"
+#include <SDL3/SDL_stdinc.h>
 
 
-extern inline void Mtx_Identity(float m[16]);
-extern inline void Mtx_Translation(float m[16], float x, float y, float z);
-extern inline void Mtx_Scaled(float m[16], float x, float y, float z);
+extern inline Mtx Mtx_Init(Vec4f d);
+extern inline Mtx Mtx_InitScalar(float s);
+extern inline Mtx Mtx_Translation(float x, float y, float z);
+extern inline Mtx Mtx_Scaled(float x, float y, float z);
 
 static void MakeRotation(float m[9], float c, float s, float x, float y, float z)
 {
@@ -44,20 +46,20 @@ static void MakeGLRotation(float m[9], float angle, float x, float y, float z)
 	MakeRotation(m, SDL_cosf(theta), SDL_sinf(theta), x, y, z);
 }
 
-void Mtx_Rotation(float m[16], float angle, float x, float y, float z)
+Mtx Mtx_Rotation(float angle, float x, float y, float z)
 {
 	float r[9];
 	MakeGLRotation(r, angle, x, y, z);
-
-	m[3] = m[7] = m[11] = m[12] = m[13] = m[14] = 0.0f;
-	m[15] = 1.0f;
-
-	m[0] = r[0]; m[1] = r[1]; m[2]  = r[2];
-	m[4] = r[3]; m[5] = r[4]; m[6]  = r[5];
-	m[8] = r[6]; m[9] = r[7]; m[10] = r[8];
+	return (Mtx)
+	{
+		.c[0] = { r[0], r[1], r[2], 0.0f },
+		.c[1] = { r[3], r[4], r[5], 0.0f },
+		.c[2] = { r[6], r[7], r[8], 0.0f },
+		.c[3] = { 0.0f, 0.0f, 0.0f, 1.0f }
+	};
 }
 
-void Mtx_Perspective(float m[16], float fovy, float aspect, float near, float far)
+Mtx Mtx_Perspective(float fovy, float aspect, float near, float far)
 {
 	const float h = 1.0f / SDL_tanf(fovy * (SDL_PI_F / 180.0f) * 0.5f);
 	const float w = h / aspect;
@@ -65,43 +67,39 @@ void Mtx_Perspective(float m[16], float fovy, float aspect, float near, float fa
 	const float zh = far * invClipRng;
 	const float zl = (far * near) * invClipRng;
 
-	/*
-	  [w  0  0  0]
-	  [0  h  0  0]
-	  [0  0 zh zl]
-	  [0  0 -1  0]
-	*/
-	m[1] = m[2] = m[3] = m[4] = m[6] = m[7] = m[8] = m[9] = m[12] = m[13] = m[15] = 0.0f;
-	m[0]  =     w;
-	m[5]  =     h;
-	m[10] =    zh;
-	m[14] =    zl;
-	m[11] = -1.0f;
+	return (Mtx)
+	{
+		.c[0] = { w, 0, 0.f,  0 },
+		.c[1] = { 0, h, 0.f,  0 },
+		.c[2] = { 0, 0,  zh, -1 },
+		.c[3] = { 0, 0,  zl,  0 }
+	};
 }
 
-void Mtx_Orthographic(float m[16], float left, float right, float bottom, float top, float near, float far)
+Mtx Mtx_Orthographic(float left, float right, float bottom, float top, float near, float far)
 {
-	/*
-	  [w 0 0 x]
-	  [0 h 0 y]
-	  [0 0 d z]
-	  [0 0 0 1]
-	*/
-	m[1] = m[2] = m[3] = m[4] = m[6] = m[7] = m[8] = m[9] = m[11] = 0.0f;
-	m[0]  = 2.0f / (right - left);
-	m[5]  = 2.0f / (top - bottom);
-	m[10] = 1.0f / (far - near);
-	m[12] = -(right + left) / (right - left);
-	m[13] = -(top + bottom) / (top - bottom);
-	m[14] = -near / (far - near);
-	m[15] = 1.0f;
+	const float w = 2.0f / (right - left);
+	const float h = 2.0f / (top - bottom);
+	const float d = 1.0f / (far - near);
+	const float x = -(right + left) / (right - left);
+	const float y = -(top + bottom) / (top - bottom);
+	const float z = -near / (far - near);
+
+	return (Mtx)
+	{
+		.c[0] = { w, 0, 0, 0 },
+		.c[1] = { 0, h, 0, 0 },
+		.c[2] = { 0, 0, d, 0 },
+		.c[3] = { x, y, z, 1 }
+	};
 }
 
-extern inline void Mtx_Orthographic2D(float m[16], float left, float right, float bottom, float top);
+extern inline Mtx Mtx_Orthographic2D(float left, float right, float bottom, float top);
 
-void Mtx_Multiply(float m[16], const float l[16], const float r[16])
+Mtx Mtx_Multiply(const Mtx* restrict l, const Mtx* restrict r)
 {
-	int i = 0;
+	Mtx m;
+	float* p = m.a;
 	for (int col = 0; col < 4; ++col)
 	{
 		for (int row = 0; row < 4; ++row)
@@ -109,31 +107,38 @@ void Mtx_Multiply(float m[16], const float l[16], const float r[16])
 			float a = 0.f;
 			for (int j = 0; j < 4; ++j)
 			{
-				a += l[j * 4 + row] * r[col * 4 + j];
+				a += l->a[j * 4 + row] * r->a[col * 4 + j];
 			}
-			m[i++] = a;
+			*p++ = a;
 		}
 	}
+	return m;
 }
 
-void Mtx_VectorProduct(float v[4], const float l[16], const float r[4])
+Vec4f Mtx_VectorProduct(const Mtx* l, Vec4f r)
 {
-	v[0] = l[0]  * r[0] + l[1]  * r[1] + l[2]  * r[2] + l[3]  * r[3];
-	v[1] = l[4]  * r[0] + l[5]  * r[1] + l[6]  * r[2] + l[7]  * r[3];
-	v[2] = l[8]  * r[0] + l[9]  * r[1] + l[10] * r[2] + l[11] * r[3];
-	v[3] = l[12] * r[0] + l[13] * r[1] + l[14] * r[2] + l[15] * r[3];
+	return (Vec4f)
+	{
+		l->c[0].x * r.x + l->c[0].y * r.y + l->c[0].z * r.z + l->c[0].w * r.w,
+		l->c[1].x * r.x + l->c[1].y * r.y + l->c[1].z * r.z + l->c[1].w * r.w,
+		l->c[2].x * r.x + l->c[2].y * r.y + l->c[2].z * r.z + l->c[2].w * r.w,
+		l->c[3].x * r.x + l->c[3].y * r.y + l->c[3].z * r.z + l->c[3].w * r.w
+	};
 }
 
-void Mtx_VectorProject(float v[4], const float l[16], const float r[4])
+Vec4f Mtx_VectorProject(const Mtx* l, Vec4f r)
 {
-	const float w = l[3] * r[0] + l[7] * r[1] + l[11] * r[2] + l[15] * r[3], iw = 1.0f / w;
-	v[0] = (l[0] * r[0] + l[4] * r[1] + l[8]  * r[2] + l[12] * r[3]) * iw;
-	v[1] = (l[1] * r[0] + l[5] * r[1] + l[9]  * r[2] + l[13] * r[3]) * iw;
-	v[2] = (l[2] * r[0] + l[6] * r[1] + l[10] * r[2] + l[14] * r[3]) * iw;
-	v[3] = w * iw;
+	const float w = l->c[0].w * r.x + l->c[1].w * r.y + l->c[2].w * r.z + l->c[3].w * r.w, iw = 1.0f / w;
+	return (Vec4f)
+	{
+		(l->c[0].x * r.x + l->c[1].x * r.y + l->c[2].x * r.z + l->c[3].x * r.w) * iw,
+		(l->c[0].y * r.x + l->c[1].y * r.y + l->c[2].y * r.z + l->c[3].y * r.w) * iw,
+		(l->c[0].z * r.x + l->c[1].z * r.y + l->c[2].z * r.z + l->c[3].z * r.w) * iw,
+		w * iw
+	};
 }
 
-void Mtx_Translate(float m[16], float x, float y, float z)
+void Mtx_Translate(Mtx* m, float x, float y, float z)
 {
 	/*
 	  m = { [1 0 0 x]
@@ -141,13 +146,13 @@ void Mtx_Translate(float m[16], float x, float y, float z)
 	        [0 0 1 z]
 	        [0 0 0 1] } * m
 	*/
-	m[12] += x * m[0] + y * m[4] + z * m[8];
-	m[13] += x * m[1] + y * m[5] + z * m[9];
-	m[14] += x * m[2] + y * m[6] + z * m[10];
-	m[15] += x * m[3] + y * m[7] + z * m[11];
+	m->c[3].x += x * m->c[0].x + y * m->c[1].x + z * m->c[2].x;
+	m->c[3].y += x * m->c[0].y + y * m->c[1].y + z * m->c[2].y;
+	m->c[3].z += x * m->c[0].z + y * m->c[1].z + z * m->c[2].z;
+	m->c[3].w += x * m->c[0].w + y * m->c[1].w + z * m->c[2].w;
 }
 
-void Mtx_Scale(float m[16], float x, float y, float z)
+void Mtx_Scale(Mtx* m, float x, float y, float z)
 {
 	/*
 	  m = { [x 0 0 0]
@@ -155,29 +160,29 @@ void Mtx_Scale(float m[16], float x, float y, float z)
 	        [0 0 z 0]
 	        [0 0 0 1] } * m
 	*/
-	m[0] *= x; m[1] *= x; m[2]  *= x; m[3]  *= x;
-	m[4] *= y; m[5] *= y; m[6]  *= y; m[7]  *= y;
-	m[8] *= z; m[9] *= z; m[10] *= z; m[11] *= z;
+	m->c[0].x *= x; m->c[0].y *= x; m->c[0].z *= x; m->c[0].w *= x;
+	m->c[1].x *= y; m->c[1].y *= y; m->c[1].z *= y; m->c[1].w *= y;
+	m->c[2].x *= z; m->c[2].y *= z; m->c[2].z *= z; m->c[2].w *= z;
 }
 
-void Mtx_Rotate(float m[16], float angle, float x, float y, float z)
+void Mtx_Rotate(Mtx* m, float angle, float x, float y, float z)
 {
 	// Set up temporaries
 	float tmp[12], r[9];
-	SDL_memcpy(tmp, m, sizeof(float) * 12);
+	SDL_memcpy(tmp, m->a, sizeof(float) * 12);
 	MakeGLRotation(r, angle, x, y, z);
 
 	// Partial matrix multiplication
-	m[0]  = r[0] * tmp[0] + r[1] * tmp[4] + r[2] * tmp[8];
-	m[1]  = r[0] * tmp[1] + r[1] * tmp[5] + r[2] * tmp[9];
-	m[2]  = r[0] * tmp[2] + r[1] * tmp[6] + r[2] * tmp[10];
-	m[3]  = r[0] * tmp[3] + r[1] * tmp[7] + r[2] * tmp[11];
-	m[4]  = r[3] * tmp[0] + r[4] * tmp[4] + r[5] * tmp[8];
-	m[5]  = r[3] * tmp[1] + r[4] * tmp[5] + r[5] * tmp[9];
-	m[6]  = r[3] * tmp[2] + r[4] * tmp[6] + r[5] * tmp[10];
-	m[7]  = r[3] * tmp[3] + r[4] * tmp[7] + r[5] * tmp[11];
-	m[8]  = r[6] * tmp[0] + r[7] * tmp[4] + r[8] * tmp[8];
-	m[9]  = r[6] * tmp[1] + r[7] * tmp[5] + r[8] * tmp[9];
-	m[10] = r[6] * tmp[2] + r[7] * tmp[6] + r[8] * tmp[10];
-	m[11] = r[6] * tmp[3] + r[7] * tmp[7] + r[8] * tmp[11];
+	m->a[0]  = r[0] * tmp[0] + r[1] * tmp[4] + r[2] * tmp[8];
+	m->a[1]  = r[0] * tmp[1] + r[1] * tmp[5] + r[2] * tmp[9];
+	m->a[2]  = r[0] * tmp[2] + r[1] * tmp[6] + r[2] * tmp[10];
+	m->a[3]  = r[0] * tmp[3] + r[1] * tmp[7] + r[2] * tmp[11];
+	m->a[4]  = r[3] * tmp[0] + r[4] * tmp[4] + r[5] * tmp[8];
+	m->a[5]  = r[3] * tmp[1] + r[4] * tmp[5] + r[5] * tmp[9];
+	m->a[6]  = r[3] * tmp[2] + r[4] * tmp[6] + r[5] * tmp[10];
+	m->a[7]  = r[3] * tmp[3] + r[4] * tmp[7] + r[5] * tmp[11];
+	m->a[8]  = r[6] * tmp[0] + r[7] * tmp[4] + r[8] * tmp[8];
+	m->a[9]  = r[6] * tmp[1] + r[7] * tmp[5] + r[8] * tmp[9];
+	m->a[10] = r[6] * tmp[2] + r[7] * tmp[6] + r[8] * tmp[10];
+	m->a[11] = r[6] * tmp[3] + r[7] * tmp[7] + r[8] * tmp[11];
 }

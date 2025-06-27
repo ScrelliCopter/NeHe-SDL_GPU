@@ -20,7 +20,7 @@ static SDL_GPUTexture* texture = NULL;
 static SDL_GPUSampler* sampler = NULL;
 
 
-static float projection[16];
+static Mtx projection;
 
 static bool twinkle = false;
 
@@ -184,7 +184,7 @@ static void Lesson9_Resize(NeHeContext* ctx, int width, int height)
 	// Avoid division by zero by clamping height
 	height = SDL_max(height, 1);
 	// Recalculate projection matrix
-	Mtx_Perspective(projection, 45.0f, (float)width / (float)height, 0.1f, 100.0f);
+	projection = Mtx_Perspective(45.0f, (float)width / (float)height, 0.1f, 100.0f);
 }
 
 static void Lesson9_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restrict cmd,
@@ -282,10 +282,9 @@ static void Lesson9_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restri
 	}, 1);
 
 	// Push matrix uniforms
-	struct Uniform { float view[16], projection[16]; } u;
-	Mtx_Translation(u.view, 0.0f ,0.0f, zoom);
-	Mtx_Rotate(u.view, tilt, 1.0f, 0.0f, 0.0f);
-	SDL_memcpy(u.projection, projection, sizeof(projection));
+	Mtx view = Mtx_Translation(0.0f ,0.0f, zoom);
+	Mtx_Rotate(&view, tilt, 1.0f, 0.0f, 0.0f);
+	struct Uniform { Mtx view, projection; } u = { view, projection };
 	SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(u));
 
 	SDL_DrawGPUPrimitives(renderPass, 6, numInstances, 0, 0);

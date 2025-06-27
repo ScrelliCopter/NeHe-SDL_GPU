@@ -66,7 +66,7 @@ static SDL_GPUBuffer* idxBuffer = NULL;
 static SDL_GPUSampler* samplers[3] = { NULL, NULL, NULL };
 static SDL_GPUTexture* texture = NULL;
 
-static float projection[16];
+static Mtx projection;
 
 static bool lighting = false;
 static bool blending = false;
@@ -274,7 +274,7 @@ static void Lesson8_Resize(NeHeContext* restrict ctx, int width, int height)
 	// Avoid division by zero by clamping height
 	height = SDL_max(height, 1);
 	// Recalculate projection matrix
-	Mtx_Perspective(projection, 45.0f, (float)width / (float)height, 0.1f, 100.0f);
+	projection = Mtx_Perspective(45.0f, (float)width / (float)height, 0.1f, 100.0f);
 }
 
 static void Lesson8_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restrict cmd,
@@ -326,26 +326,24 @@ static void Lesson8_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restri
 	}, SDL_GPU_INDEXELEMENTSIZE_16BIT);
 
 	// Setup the view
-	float model[16];
-	Mtx_Translation(model, 0.0f, 0.0f, z);
-	Mtx_Rotate(model, xRot, 1.0f, 0.0f, 0.0f);
-	Mtx_Rotate(model, yRot, 0.0f, 1.0f, 0.0f);
+	Mtx model = Mtx_Translation(0.0f, 0.0f, z);
+	Mtx_Rotate(&model, xRot, 1.0f, 0.0f, 0.0f);
+	Mtx_Rotate(&model, yRot, 0.0f, 1.0f, 0.0f);
 
 	// Push shader uniforms
 	if (lighting)
 	{
-		struct { float model[16], projection[16]; } u;
-		SDL_memcpy(u.model, model, sizeof(u.model));
-		SDL_memcpy(u.projection, projection, sizeof(u.projection));
+		struct Uniform { Mtx model, projection; } u = { model, projection };
 		SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(u));
 		SDL_PushGPUVertexUniformData(cmd, 1, &light, sizeof(light));
 	}
 	else
 	{
-		struct { float modelViewProj[16], color[4]; } u;
-		Mtx_Multiply(u.modelViewProj, projection, model);
-		// 50% translucency
-		SDL_memcpy(u.color, (const float[4]){ 1.0f, 1.0f, 1.0f, 0.5f }, sizeof(float) * 4);
+		struct Uniform { Mtx modelViewProj; float color[4]; } u =
+		{
+			.modelViewProj = Mtx_Multiply(&projection, &model),
+			.color = { 1.0f, 1.0f, 1.0f, 0.5f }  // 50% translucency
+		};
 		SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(u));
 	}
 

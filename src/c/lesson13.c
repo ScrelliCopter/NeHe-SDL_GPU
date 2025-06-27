@@ -25,7 +25,7 @@ static SDL_GPUSampler* sampler = NULL;
 static SDL_GPUTexture* fontTex = NULL;
 static stbtt_packedchar fontChars[96];
 
-static float perspective[16], ortho[16];
+static Mtx perspective, ortho;
 
 // Counters for animating the text
 static float counter1 = 0.0f, counter2 = 0.0f;
@@ -232,8 +232,8 @@ static void Lesson13_Resize(NeHeContext* restrict ctx, int width, int height)
 	// Avoid division by zero by clamping height
 	height = SDL_max(height, 1);
 	// Recalculate projection matrix
-	Mtx_Orthographic2D(ortho, 0.0f, (float)width, 0.0f, (float)height);
-	Mtx_Perspective(perspective, 45.0f, (float)width / (float)height, 0.1f, 100.0f);
+	ortho = Mtx_Orthographic2D(0.0f, (float)width, 0.0f, (float)height);
+	perspective = Mtx_Perspective(45.0f, (float)width / (float)height, 0.1f, 100.0f);
 }
 
 static void Lesson13_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restrict cmd,
@@ -290,7 +290,7 @@ static void Lesson13_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	float b = 1.0f - 0.5f * SDL_cosf(counter1 + counter2);
 
 	// Text position in world space
-	const float textWorldPos[4] =
+	const Vec4f textWorldPos =
 	{
 		0.05f * SDL_cosf(counter1) - 0.45f,
 		0.32f * SDL_sinf(counter2),
@@ -299,17 +299,18 @@ static void Lesson13_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	};
 
 	// Position text in screen coordinates (Y-up)
-	float model[16], textScreenPos[4];
-	Mtx_VectorProject(textScreenPos, perspective, textWorldPos);
-	Mtx_Translation(model,
-		floorf((float)w * (textScreenPos[0] + 1.0f) / 2.0f),
-		floorf((float)h * (textScreenPos[1] + 1.0f) / 2.0f),
+	Vec4f textScreenPos = Mtx_VectorProject(&perspective, textWorldPos);
+	Mtx model = Mtx_Translation(
+		floorf((float)w * (textScreenPos.x + 1.0f) / 2.0f),
+		floorf((float)h * (textScreenPos.y + 1.0f) / 2.0f),
 		0.0f);
 
 	// Push matrix uniforms
-	struct Uniform { float modelViewProj[16], color[4]; } u;
-	Mtx_Multiply(u.modelViewProj, ortho, model);
-	SDL_memcpy(u.color, (float[4]){ r, g, b, 1.0f }, sizeof(u.color));
+	struct Uniform { Mtx modelViewProj; float color[4]; } u =
+	{
+		.modelViewProj = Mtx_Multiply(&ortho, &model),
+		.color = { r, g, b, 1.0f }
+	};
 	SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(u));
 
 	// Draw characters

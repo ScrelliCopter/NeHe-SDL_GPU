@@ -1,56 +1,68 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
-#include <SDL3/SDL_stdinc.h>
+typedef struct { float x, y, z, w; } Vec4f;
+typedef union { Vec4f c[4]; float a[16]; } Mtx;
 
-inline void Mtx_Identity(float m[16])
+inline Mtx Mtx_Init(Vec4f d)
 {
-	SDL_memcpy(m, (float[])
+	return (Mtx)
 	{
-		1, 0, 0, 0,
-		0, 1, 0, 0,
-		0, 0, 1, 0,
-		0, 0, 0, 1
-	}, sizeof(float) * 16);
+		.c[0] = { d.x, 0, 0, 0 },
+		.c[1] = { 0, d.y, 0, 0 },
+		.c[2] = { 0, 0, d.z, 0 },
+		.c[3] = { 0, 0, 0, d.w }
+	};
 }
 
-inline void Mtx_Translation(float m[16], float x, float y, float z)
+inline Mtx Mtx_InitScalar(float s)
 {
-	SDL_memcpy(m, (float[])
+	return (Mtx)
 	{
-		1, 0, 0, 0,
-		0, 1, 0, 0,
-		0, 0, 1, 0,
-		x, y, z, 1
-	}, sizeof(float) * 16);
+		.c[0] = { s, 0, 0, 0 },
+		.c[1] = { 0, s, 0, 0 },
+		.c[2] = { 0, 0, s, 0 },
+		.c[3] = { 0, 0, 0, s }
+	};
 }
 
-inline void Mtx_Scaled(float m[16], float x, float y, float z)
+inline Mtx Mtx_Translation(float x, float y, float z)
 {
-	SDL_memcpy(m, (float[])
+	return (Mtx)
 	{
-		x, 0, 0, 0,
-		0, y, 0, 0,
-		0, 0, z, 0,
-		0, 0, 0, 1
-	}, sizeof(float) * 16);
+		.c[0] = { 1, 0, 0, 0 },
+		.c[1] = { 0, 1, 0, 0 },
+		.c[2] = { 0, 0, 1, 0 },
+		.c[3] = { x, y, z, 1 }
+	};
 }
 
-void Mtx_Rotation(float m[16], float angle, float x, float y, float z);
-void Mtx_Perspective(float m[16], float fovy, float aspect, float near, float far);
-void Mtx_Orthographic(float m[16], float left, float right, float bottom, float top, float near, float far);
-
-inline void Mtx_Orthographic2D(float m[16], float left, float right, float bottom, float top)
+inline Mtx Mtx_Scaled(float x, float y, float z)
 {
-	Mtx_Orthographic(m, left, right, bottom, top, -1.0f, 1.0f);
+	return (Mtx)
+	{
+		.c[0] = { x, 0, 0, 0 },
+		.c[1] = { 0, y, 0, 0 },
+		.c[2] = { 0, 0, z, 0 },
+		.c[3] = { 0, 0, 0, 1 }
+	};
 }
 
-void Mtx_Multiply(float m[16], const float l[16], const float r[16]);
-void Mtx_VectorProduct(float v[4], const float l[16], const float r[4]);
-void Mtx_VectorProject(float v[4], const float l[16], const float r[4]);
+Mtx Mtx_Rotation(float angle, float x, float y, float z);
+Mtx Mtx_Perspective(float fovy, float aspect, float near, float far);
+Mtx Mtx_Orthographic(float left, float right, float bottom, float top, float near, float far);
 
-void Mtx_Translate(float m[16], float x, float y, float z);
-void Mtx_Scale(float m[16], float x, float y, float z);
-void Mtx_Rotate(float m[16], float angle, float x, float y, float z);
+inline Mtx Mtx_Orthographic2D(float left, float right, float bottom, float top)
+{
+	return Mtx_Orthographic(left, right, bottom, top, -1.0f, 1.0f);
+}
+
+Mtx Mtx_Multiply(const Mtx* restrict l, const Mtx* restrict r);
+Vec4f Mtx_VectorProduct(const Mtx* l, Vec4f r);
+Vec4f Mtx_VectorProject(const Mtx* l, Vec4f r);
+
+void Mtx_Translate(Mtx* m, float x, float y, float z);
+void Mtx_Scale(Mtx* m, float x, float y, float z);
+void Mtx_Rotate(Mtx* m, float angle, float x, float y, float z);
 
 #endif//MATRIX_H

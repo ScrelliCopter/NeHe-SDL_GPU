@@ -16,7 +16,7 @@ typedef struct
 
 typedef struct
 {
-	float model[16];
+	Mtx model;
 	float r, g, b, a;
 } Instance;
 
@@ -73,7 +73,7 @@ static SDL_GPUTransferBuffer* instanceXferBuffer = NULL;
 static SDL_GPUSampler* sampler = NULL;
 static SDL_GPUTexture* texture = NULL;
 
-static float projection[16];
+static Mtx projection;
 
 static float xRot = 0.0f, yRot = 0.0f;
 static float z = -20.0f;
@@ -123,25 +123,25 @@ static bool Lesson12_Init(NeHeContext* restrict ctx)
 			.location = 4,
 			.buffer_slot = 1,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-			.offset = offsetof(Instance, model)
+			.offset = offsetof(Instance, model.c[0])
 		},
 		{
 			.location = 5,
 			.buffer_slot = 1,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-			.offset = offsetof(Instance, model[4])
+			.offset = offsetof(Instance, model.c[1])
 		},
 		{
 			.location = 6,
 			.buffer_slot = 1,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-			.offset = offsetof(Instance, model[8])
+			.offset = offsetof(Instance, model.c[2])
 		},
 		{
 			.location = 7,
 			.buffer_slot = 1,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-			.offset = offsetof(Instance, model[12])
+			.offset = offsetof(Instance, model.c[3])
 		},
 		// Instance colour
 		{
@@ -273,7 +273,7 @@ static void Lesson12_Resize(NeHeContext* restrict ctx, int width, int height)
 	// Avoid division by zero by clamping height
 	height = SDL_max(height, 1);
 	// Recalculate projection matrix
-	Mtx_Perspective(projection, 45.0f, (float)width / (float)height, 0.1f, 100.0f);
+	projection = Mtx_Perspective(45.0f, (float)width / (float)height, 0.1f, 100.0f);
 }
 
 static void Lesson12_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restrict cmd,
@@ -317,12 +317,12 @@ static void Lesson12_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 		{
 			Instance* instance = instances++;
 
-			Mtx_Translation(instance->model,
+			instance->model = Mtx_Translation(
 				1.4f + (float)x * 2.8f - rowFact * 1.4f,
 				((float)(numRows + 1) - rowFact) * 2.4f - (float)(numRows + 2),
 				0);
-			Mtx_Rotate(instance->model, 45.0f - 2.0f * rowFact + xRot, 1.0f, 0.0f, 0.0f);
-			Mtx_Rotate(instance->model, 45.0f + yRot, 0.0f, 1.0f, 0.0f);
+			Mtx_Rotate(&instance->model, 45.0f - 2.0f * rowFact + xRot, 1.0f, 0.0f, 0.0f);
+			Mtx_Rotate(&instance->model, 45.0f + yRot, 0.0f, 1.0f, 0.0f);
 
 			const int colIdx = SDL_min(row, (int)SDL_arraysize(boxColors) - 1);
 			instance->r = boxColors[colIdx][0];
@@ -372,9 +372,8 @@ static void Lesson12_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	}, SDL_GPU_INDEXELEMENTSIZE_16BIT);
 
 	// Push shader uniforms
-	struct Uniform { float view[16], projection[16]; } u;
-	Mtx_Translation(u.view, 0.0f, 0.0f, z);
-	SDL_memcpy(u.projection, projection, sizeof(u.projection));
+	Mtx view = Mtx_Translation(0.0f, 0.0f, z);
+	struct Uniform { Mtx view, projection; } u = { view, projection };
 	SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(u));
 
 	// Draw textured cube instances

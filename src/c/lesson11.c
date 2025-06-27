@@ -19,7 +19,7 @@ static SDL_GPUBuffer* idxBuffer = NULL;
 static SDL_GPUSampler* sampler = NULL;
 static SDL_GPUTexture* texture = NULL;
 
-static float projection[16];
+static Mtx projection;
 
 #define GRID_SIZE 44
 #define NUM_GRID_TRIS (GRID_SIZE * GRID_SIZE * 6)
@@ -211,7 +211,7 @@ static void Lesson11_Resize(NeHeContext* ctx, int width, int height)
 	// Avoid division by zero by clamping height
 	height = SDL_max(height, 1);
 	// Recalculate projection matrix
-	Mtx_Perspective(projection, 45.0f, (float)width / (float)height, 0.1f, 100.0f);
+	projection = Mtx_Perspective(45.0f, (float)width / (float)height, 0.1f, 100.0f);
 }
 
 static void Lesson11_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restrict cmd,
@@ -260,17 +260,17 @@ static void Lesson11_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 		.offset = 0
 	}, SDL_GPU_INDEXELEMENTSIZE_16BIT);
 
-	float model[16];
-
-	Mtx_Translation(model, 0.0f, 0.0f, -12.0f);
-	Mtx_Rotate(model, xRot, 1.0f, 0.0f, 0.0f);
-	Mtx_Rotate(model, yRot, 0.0f, 1.0f, 0.0f);
-	Mtx_Rotate(model, zRot, 0.0f, 0.0f, 1.0f);
+	Mtx model = Mtx_Translation(0.0f, 0.0f, -12.0f);
+	Mtx_Rotate(&model, xRot, 1.0f, 0.0f, 0.0f);
+	Mtx_Rotate(&model, yRot, 0.0f, 1.0f, 0.0f);
+	Mtx_Rotate(&model, zRot, 0.0f, 0.0f, 1.0f);
 
 	// Push shader uniforms
-	struct Uniform { float modelViewProj[16]; float waveOffset; } u;
-	Mtx_Multiply(u.modelViewProj, projection, model);
-	u.waveOffset = (float)((wiggleCount / 2) % 45) / 45.0f;  // NOLINT(*-integer-division)
+	struct Uniform { Mtx modelViewProj; float waveOffset; } u =
+	{
+		.modelViewProj = Mtx_Multiply(&projection, &model),
+		.waveOffset = (float)((wiggleCount / 2) % 45) / 45.0f  // NOLINT(*-integer-division)
+	};
 	SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(u));
 
 	// Draw textured flag (Front, triangles)

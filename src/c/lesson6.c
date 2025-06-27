@@ -63,7 +63,7 @@ static SDL_GPUBuffer* idxBuffer = NULL;
 static SDL_GPUSampler* sampler = NULL;
 static SDL_GPUTexture* texture = NULL;
 
-static float projection[16];
+static Mtx projection;
 
 static float xRot = 0.0f, yRot = 0.0f, zRot = 0.0f;
 
@@ -183,7 +183,7 @@ static void Lesson6_Resize(NeHeContext* restrict ctx, int width, int height)
 	// Avoid division by zero by clamping height
 	height = SDL_max(height, 1);
 	// Recalculate projection matrix
-	Mtx_Perspective(projection, 45.0f, (float)width / (float)height, 0.1f, 100.0f);
+	projection = Mtx_Perspective(45.0f, (float)width / (float)height, 0.1f, 100.0f);
 }
 
 static void Lesson6_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restrict cmd,
@@ -233,17 +233,15 @@ static void Lesson6_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restri
 		.offset = 0
 	}, SDL_GPU_INDEXELEMENTSIZE_16BIT);
 
-	float model[16], modelViewProj[16];
-
 	// Move cube 5 units into the screen and apply some rotations
-	Mtx_Translation(model, 0.0f, 0.0f, -5.0f);
-	Mtx_Rotate(model, xRot, 1.0f, 0.0f, 0.0f);
-	Mtx_Rotate(model, yRot, 0.0f, 1.0f, 0.0f);
-	Mtx_Rotate(model, zRot, 0.0f, 0.0f, 1.0f);
+	Mtx model = Mtx_Translation(0.0f, 0.0f, -5.0f);
+	Mtx_Rotate(&model, xRot, 1.0f, 0.0f, 0.0f);
+	Mtx_Rotate(&model, yRot, 0.0f, 1.0f, 0.0f);
+	Mtx_Rotate(&model, zRot, 0.0f, 0.0f, 1.0f);
 
 	// Push shader uniforms
-	Mtx_Multiply(modelViewProj, projection, model);
-	SDL_PushGPUVertexUniformData(cmd, 0, &modelViewProj, sizeof(modelViewProj));
+	Mtx modelViewProj = Mtx_Multiply(&projection, &model);
+	SDL_PushGPUVertexUniformData(cmd, 0, &modelViewProj, sizeof(Mtx));
 
 	// Draw textured cube
 	SDL_DrawGPUIndexedPrimitives(pass, SDL_arraysize(indices), 1, 0, 0, 0);
