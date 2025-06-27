@@ -25,7 +25,7 @@ static SDL_GPUSampler* sampler = NULL;
 static SDL_GPUTexture* fontTex = NULL;
 static stbtt_packedchar fontChars[96];
 
-static float projection[16];
+static float perspective[16], ortho[16];
 
 // Counters for animating the text
 static float counter1 = 0.0f, counter2 = 0.0f;
@@ -99,7 +99,7 @@ static unsigned NeHe_DrawText(ShaderCharacter* restrict outChars, float x, float
 	return MAX_CHARACTERS;
 }
 
-static unsigned NeHe_Printf(ShaderCharacter* restrict outChars, const char* restrict fmt, ...)
+static unsigned NeHe_Printf(ShaderCharacter* restrict outChars, SDL_PRINTF_FORMAT_STRING const char* restrict fmt, ...)
 {
 	char text[MAX_CHARACTERS + 1];
 	va_list args;
@@ -232,8 +232,8 @@ static void Lesson13_Resize(NeHeContext* restrict ctx, int width, int height)
 	// Avoid division by zero by clamping height
 	height = SDL_max(height, 1);
 	// Recalculate projection matrix
-	Mtx_Orthographic2D(projection, 0.0f, (float)width, 0.0f, (float)height);
-	//Mtx_Perspective(projection, 45.0f, (float)width / (float)height, 0.1f, 100.0f);
+	Mtx_Orthographic2D(ortho, 0.0f, (float)width, 0.0f, (float)height);
+	Mtx_Perspective(perspective, 45.0f, (float)width / (float)height, 0.1f, 100.0f);
 }
 
 static void Lesson13_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restrict cmd,
@@ -290,7 +290,7 @@ static void Lesson13_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	float b = 1.0f - 0.5f * SDL_cosf(counter1 + counter2);
 
 	// Text position in world space
-	const float textPosition[4] =
+	const float textWorldPos[4] =
 	{
 		0.05f * SDL_cosf(counter1) - 0.45f,
 		0.32f * SDL_sinf(counter2),
@@ -299,14 +299,16 @@ static void Lesson13_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	};
 
 	// Position text in screen coordinates (Y-up)
-	const float rasterX = floorf((float)w * (textPosition[0] + 1.0f) / 2.0f);
-	const float rasterY = floorf((float)h * (textPosition[1] + 1.0f) / 2.0f);
-	float view[16];
-	Mtx_Translation(view, rasterX, rasterY, 0.0f);
+	float view[16], textScreenPos[4];
+	Mtx_VectorProject(textScreenPos, perspective, textWorldPos);
+	Mtx_Translation(view,
+		floorf((float)w * (textScreenPos[0] + 1.0f) / 2.0f),
+		floorf((float)h * (textScreenPos[1] + 1.0f) / 2.0f),
+		0.0f);
 
 	// Push matrix uniforms
 	struct Uniform { float viewProj[16], color[4]; } u;
-	Mtx_Multiply(u.viewProj, projection, view);
+	Mtx_Multiply(u.viewProj, ortho, view);
 	SDL_memcpy(u.color, (float[4]){ r, g, b, 1.0f }, sizeof(u.color));
 	SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(u));
 
