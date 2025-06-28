@@ -59,7 +59,7 @@ inline Mtx Mtx_Orthographic2D(float left, float right, float bottom, float top)
 
 Mtx Mtx_Multiply(const Mtx* restrict l, const Mtx* restrict r);
 Vec4f Mtx_VectorProduct(const Mtx* l, Vec4f r);
-Vec4f Mtx_VectorProject(const Mtx* l, Vec4f r);
+Vec4f Mtx_VectorProject(Vec4f l, const Mtx* r);
 
 void Mtx_Translate(Mtx* m, float x, float y, float z);
 void Mtx_Scale(Mtx* m, float x, float y, float z);

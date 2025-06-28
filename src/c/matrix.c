@@ -126,14 +126,14 @@ Vec4f Mtx_VectorProduct(const Mtx* l, Vec4f r)
 	};
 }
 
-Vec4f Mtx_VectorProject(const Mtx* l, Vec4f r)
+Vec4f Mtx_VectorProject(Vec4f l, const Mtx* r)
 {
-	const float w = l->c[0].w * r.x + l->c[1].w * r.y + l->c[2].w * r.z + l->c[3].w * r.w, iw = 1.0f / w;
+	const float w = l.x * r->c[0].w + l.y * r->c[1].w + l.z * r->c[2].w + l.w * r->c[3].w, iw = 1.0f / w;
 	return (Vec4f)
 	{
-		(l->c[0].x * r.x + l->c[1].x * r.y + l->c[2].x * r.z + l->c[3].x * r.w) * iw,
-		(l->c[0].y * r.x + l->c[1].y * r.y + l->c[2].y * r.z + l->c[3].y * r.w) * iw,
-		(l->c[0].z * r.x + l->c[1].z * r.y + l->c[2].z * r.z + l->c[3].z * r.w) * iw,
+		(l.x * r->c[0].x + l.y * r->c[1].x + l.z * r->c[2].x + l.w * r->c[3].x) * iw,
+		(l.x * r->c[0].y + l.y * r->c[1].y + l.z * r->c[2].y + l.w * r->c[3].y) * iw,
+		(l.x * r->c[0].z + l.y * r->c[1].z + l.z * r->c[2].z + l.w * r->c[3].z) * iw,
 		w * iw
 	};
 }
