@@ -101,10 +101,12 @@ don't need a tint uniform in the light shader.
 This lesson draws 50 (or 100 in "twinkle" mode) star particles with random
 colours; animated in a pretty concentric spiral.
 
-The current implementation instances the sprites using a storage buffer that
-contains each star's model-view matrix and colour, as all 100 stars are drawn
-in a single draw call. The approach used is still far from optimal and is also
-currently bugged on D3D12, so I may end up using a different approach later.
+With our modern shader-based pipeline we can simplify drawing the stars by
+moving the quad vertex/index buffers into the shader and only transforming the
+centre of each particle, the pipeline attributes can then be simplified down to
+just a point and a colour and all stars are drawn with a single instanced draw
+call. This also makes the star animation code easier to follow while retaining
+identical behaviour.
 
 ### Lesson 10: [Loading And Moving Through A 3D World](https://nehe.gamedev.net/tutorial/loading_and_moving_through_a_3d_world/22003/) ###
 Here it is, the ever infamous 3D world tutorial. Gaze in wonderment at the
@@ -121,3 +123,30 @@ usage of a vertex buffer instead of looping over each triangle within
 
 The togglable blending is carried over from the last lesson and lighting is
 dropped, so only two pipeline states are required. 
+
+## Lessons [11 - 15](https://nehe.gamedev.net/tutorial/lessons_11__15/28001/) ##
+
+### Lesson 11: [Waving Texture Map (Modifying The Mesh)](https://nehe.gamedev.net/tutorial/flag_effect_(waving_texture)/16002/) ###
+Bosco originally created a grid with the z positions filled with a full cycle
+of a sinusoid, and then cycled the z values horizontally every second frame to
+animate it waving. `glPolygonMode` was used to render the front of the flag as
+solid and the back as wireframe.
+
+We generate a flat grid and move flag waving calculations to the vertex shader
+so there's no need to store and modify the z positions on the CPU. Rendering
+the back of the flag as a *quad* wireframe is not trivially translatable to
+SDL_GPU as while drawing one side as a wireframe could be simply accomplished
+with drawing the same model twice with two pipelines, modern APIs don't have
+quad primitives so we use separate indices to draw the grid as lines; with the
+downside that the wireframe grid is always visible no matter the viewing angle.
+In practice this is not very noticeable because the line grid is drawn with the
+same texture.
+
+### Lesson 12: [Display Lists](https://nehe.gamedev.net/tutorial/display_lists/15003/) ###
+Instead of old-school display lists, instancing is used. We use attributes for
+per-instance data instead of storage buffers as the D3D12 shader has problems
+with indexing dynamically into storage buffers, unfortunately this requires
+passing model matrices as 4 separate columns and transposing it in the shader
+for Vulkan.
+
+### Lesson 13: [Using Bitmap Fonts](https://nehe.gamedev.net/tutorial/bitmap_fonts/17002/) ###
