@@ -87,7 +87,7 @@ cube.
 The original lesson simply toggles the `GL_BLEND` capability to enable and
 disable blending. Since we are re-using the lighting setup; we'll need four
 pipelines: the existing lit & unlit shader programs, and lit & unlit pipelines
-with depth testing disable and blending enabled; to cover all possible toggle
+with depth testing disabled and blending enabled; to cover all possible toggle
 states.
 
 The original uses `glColor4f(1, 1, 1, 0.5)` to halve the opacity when blending
