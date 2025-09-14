@@ -32,6 +32,7 @@ typedef struct
 	unsigned vertexUniforms;
 	unsigned vertexStorage;
 	unsigned fragmentSamplers;
+	unsigned fragmentUniforms;
 } NeHeShaderProgramCreateInfo;
 
 int NeHe_Random(void);

@@ -60,7 +60,7 @@ def compile_metal_shaders(
 			cwd.joinpath(obj).unlink()
 
 
-Shader = namedtuple("Shader", ["source", "output"])
+Shader = namedtuple("Shader", ["source", "output", "definitions"])
 
 
 def shaders_suffixes(shaders: Iterable[Shader],
@@ -75,7 +75,8 @@ def shaders_suffixes(shaders: Iterable[Shader],
 	for s in shaders:
 		yield Shader(
 			f"{s.source}.{in_suffix}" if in_suffix else s.source,
-			f"{s.output}.{out_suffix}" if out_suffix else s.output)
+			f"{s.output}.{out_suffix}" if out_suffix else s.output,
+			s.definitions)
 
 
 def shader_prepend_ext(shader: Shader, prep_ext: str) -> Shader:
@@ -86,7 +87,19 @@ def shader_prepend_ext(shader: Shader, prep_ext: str) -> Shader:
 	:return:         The modified shader
 	"""
 	out = Path(shader.output)
-	return Shader(shader.source, out.with_suffix(f".{prep_ext}{out.suffix}"))
+	return Shader(shader.source, out.with_suffix(f".{prep_ext}{out.suffix}"), shader.definitions)
+
+
+def shader_definitions(shader: Shader, flag: str = "-D") -> list[str]:
+	"""Get the provided shader's defines as flags
+
+	:param shader: Shader to read defines of
+	:param flag:   Override the prepended flag (defaults to "-D")
+	:return:       List of flags
+	"""
+	if shader.definitions is None:
+		return []
+	return [f"{flag}{d}" for d in shader.definitions]
 
 
 def compile_spirv_shaders(shaders: list[Shader], suffix: str = "spv",
@@ -107,14 +120,14 @@ def compile_spirv_shaders(shaders: list[Shader], suffix: str = "spv",
 		if cwd.joinpath(glsl.source).exists():
 			flags = ["--quiet"]
 			compile_glsl_spirv_shader(shader_prepend_ext(glsl, "vtx"), "vert",
-				flags=[*flags, "-DVERTEX"], glslang=glslang, cwd=cwd)
+				flags=[*flags, "-DVERTEX", *shader_definitions(glsl)], glslang=glslang, cwd=cwd)
 			compile_glsl_spirv_shader(shader_prepend_ext(glsl, "frg"), "frag",
 				flags=flags, glslang=glslang, cwd=cwd)
 		else:
 			compile_hlsl_spirv_shader(shader_prepend_ext(hlsl, "vtx"), "vert",
-				flags=["-DVULKAN", "-DVERTEX"], dxc=dxc, cwd=cwd)
+				flags=["-DVULKAN", "-DVERTEX", *shader_definitions(hlsl)], dxc=dxc, cwd=cwd)
 			compile_hlsl_spirv_shader(shader_prepend_ext(hlsl, "frg"), "frag",
-				flags=["-DVULKAN"], dxc=dxc, cwd=cwd)
+				flags=["-DVULKAN", *shader_definitions(hlsl)], dxc=dxc, cwd=cwd)
 
 
 def compile_glsl_spirv_shader(shader: Shader, type: str, flags: list[str] = None,
@@ -160,15 +173,15 @@ def compile_d3d12_shaders(shaders: list[Shader], build_dxbc: bool = False,
 		dxc: str | None = None, cwd: Path | None = None) -> None:
 	for shader in shaders_suffixes(shaders, "hlsl", "dxb"):
 		compile_dxil_shader(shader_prepend_ext(shader, "vtx"), "vert",
-			flags=["-DD3D12", "-DVERTEX"], dxc=dxc, cwd=cwd)
+			flags=["-DD3D12", "-DVERTEX", *shader_definitions(shader)], dxc=dxc, cwd=cwd)
 		compile_dxil_shader(shader_prepend_ext(shader, "pxl"), "frag",
-			flags=["-DD3D12"], dxc=dxc, cwd=cwd)
+			flags=["-DD3D12", *shader_definitions(shader)], dxc=dxc, cwd=cwd)
 	if build_dxbc:  # FXC is only available thru the Windows SDK
 		for shader in shaders_suffixes(shaders, "hlsl", "fxb"):
 			compile_dxbc_shader(shader_prepend_ext(shader, "vtx"), "vert",
-				flags=["/DD3D12", "/DVERTEX"], cwd=cwd)
+				flags=["/DD3D12", "/DVERTEX", *shader_definitions(shader, "/D")], cwd=cwd)
 			compile_dxbc_shader(shader_prepend_ext(shader, "pxl"), "frag",
-				flags=["/DD3D12"], cwd=cwd)
+				flags=["/DD3D12", *shader_definitions(shader, "/D")], cwd=cwd)
 
 
 def compile_dxil_shader(shader: Shader, type: str, flags: list[str] | None = None,
@@ -240,7 +253,13 @@ def compile_shaders() -> None:
 				print(f"WARN: \"{src}.glsl\" exists but no \"{src}.hlsl\"")
 
 	def source_shaders(sources: Iterable[str | Path]) -> Iterable[Shader]:
-		return (Shader(src_dir / src, dest_dir / src) for src in sources)
+		for src in sources:
+			if src == "lesson16":
+				for l in [("unlit", []), ("lit", ["LIGHTING"])]:
+					for f in [("exp", ["FOG_EXP"]), ("exp2", ["FOG_EXP2"]), ("lin", ["FOG_LINEAR"])]:
+						yield Shader(src_dir / src, dest_dir / f"{src}_{l[0]}_{f[0]}", l[1] + f[1])
+			else:
+				yield Shader(src_dir / src, dest_dir / src, None)
 
 	# Try to find cross-platform shader compilers
 	glslang = shutil.which("glslang")
@@ -261,7 +280,8 @@ def compile_shaders() -> None:
 				library=shader.output,
 				cflags=["-Wall", "-O3",
 					f"-std={compile_platform}-metal1.1",
-					f"-m{sdk_platform}-version-min={min_version}"],
+					f"-m{sdk_platform}-version-min={min_version}",
+					*shader_definitions(shader)],
 				sdk=sdk_platform,
 				cwd=root)
 

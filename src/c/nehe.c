@@ -374,7 +374,7 @@ static SDL_GPUShader* LoadShaderBlob(NeHeContext* restrict ctx,
 		.stage = type,
 		.num_samplers = (type == SDL_GPU_SHADERSTAGE_FRAGMENT) ? info->fragmentSamplers : 0,
 		.num_storage_buffers = (type == SDL_GPU_SHADERSTAGE_VERTEX) ? info->vertexStorage : 0,
-		.num_uniform_buffers = (type == SDL_GPU_SHADERSTAGE_VERTEX) ? info->vertexUniforms : 0,
+		.num_uniform_buffers = (type == SDL_GPU_SHADERSTAGE_VERTEX) ? info->vertexUniforms : info->fragmentUniforms
 	});
 	if (!shader)
 	{

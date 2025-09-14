@@ -13,3 +13,7 @@ add_lesson(lesson10 SOURCES lesson10.c SHADERS lesson6 DATA Mud.bmp World.txt)
 add_lesson(lesson11 SOURCES lesson11.c SHADERS lesson11 DATA Tim.bmp)
 add_lesson(lesson12 SOURCES lesson12.c SHADERS lesson12 DATA Cube.bmp)
 add_lesson(lesson13 SOURCES lesson13.c stb_truetype.h SHADERS lesson13 DATA NimbusMonoPS-Bold.ttf)
+add_lesson(lesson16 SOURCES lesson16.c SHADERS
+	lesson16_unlit_exp lesson16_unlit_exp2 lesson16_unlit_lin
+	lesson16_lit_exp   lesson16_lit_exp2   lesson16_lit_lin
+	DATA Crate.bmp)
