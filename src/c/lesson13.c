@@ -4,8 +4,7 @@
  */
 
 #include "nehe.h"
-#define STB_TRUETYPE_IMPLEMENTATION
-#include "stb_truetype.h"
+#include "sdl_stbtt.h"
 
 
 typedef struct
@@ -301,8 +300,8 @@ static void Lesson13_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	// Position text in screen coordinates (Y-up)
 	Vec4f textScreenPos = Mtx_VectorProject(textWorldPos, &perspective);
 	Mtx model = Mtx_Translation(
-		floorf((float)w * (textScreenPos.x + 1.0f) / 2.0f),
-		floorf((float)h * (textScreenPos.y + 1.0f) / 2.0f),
+		SDL_floorf((float)w * (textScreenPos.x + 1.0f) / 2.0f),
+		SDL_floorf((float)h * (textScreenPos.y + 1.0f) / 2.0f),
 		0.0f);
 
 	// Push matrix uniforms
