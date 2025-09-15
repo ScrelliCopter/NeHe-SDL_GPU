@@ -48,7 +48,7 @@ static bool NeHe_BuildFont(NeHeContext* restrict ctx, const char* const restrict
 	stbtt_pack_context packCtx;
 	int res = stbtt_PackBegin(&packCtx, pixels, FONT_ATLAS_W, FONT_ATLAS_H, 0, 1, NULL);
 	if (!res) { return false; }
-	res = stbtt_PackFontRange(&packCtx, ttf, 0, (float)fontSize, ' ', 96, fontChars);
+	res = stbtt_PackFontRange(&packCtx, (const unsigned char*)ttf, 0, (float)fontSize, ' ', 96, fontChars);
 	if (!res) { return false; }
 	SDL_free(ttf);
 	stbtt_PackEnd(&packCtx);
@@ -98,6 +98,9 @@ static unsigned NeHe_DrawText(ShaderCharacter* restrict outChars, float x, float
 	return MAX_CHARACTERS;
 }
 
+#ifdef __GNUC__
+__attribute__((format(printf, 2, 3)))
+#endif
 static unsigned NeHe_Printf(ShaderCharacter* restrict outChars, SDL_PRINTF_FORMAT_STRING const char* restrict fmt, ...)
 {
 	char text[MAX_CHARACTERS + 1];
@@ -247,8 +250,8 @@ static void Lesson13_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	};
 
 	// Print text to character buffer
-	ShaderCharacter* characters = SDL_MapGPUTransferBuffer(ctx->device, charXferBuffer, true);
-	unsigned numChars = NeHe_Printf(characters, "Active OpenGL Text With NeHe - %7.2f", counter1);
+	ShaderCharacter* characters = (ShaderCharacter*)SDL_MapGPUTransferBuffer(ctx->device, charXferBuffer, true);
+	unsigned numChars = NeHe_Printf(characters, "Active OpenGL Text With NeHe - %7.2f", (double)counter1);
 	SDL_UnmapGPUTransferBuffer(ctx->device, charXferBuffer);
 
 	// Copy characters to the GPU
