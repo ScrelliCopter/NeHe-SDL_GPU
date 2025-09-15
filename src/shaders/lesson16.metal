@@ -44,6 +44,7 @@ struct Vertex2Fragment
 #ifdef LIGHTING
 	half4 color;
 #endif
+	float eyeZ;
 };
 
 vertex Vertex2Fragment VertexMain(
@@ -69,6 +70,7 @@ vertex Vertex2Fragment VertexMain(
 #ifdef LIGHTING
 	out.color = half4(ambient + lambert * diffuse, 1.0);
 #endif
+	out.eyeZ = -position.z;
 	return out;
 }
 
@@ -78,15 +80,12 @@ fragment half4 FragmentMain(
 	metal::texture2d<half, metal::access::sample> texture [[texture(0)]],
 	metal::sampler sampler [[sampler(0)]])
 {
-	const auto dist = in.position.z / in.position.w;
-
 #ifdef FOG_LINEAR
-	const auto fogFact = metal::saturate((u.fog.end - dist) / (u.fog.end - u.fog.start));
+	const auto fogFact = metal::saturate((u.fog.end - in.eyeZ) / (u.fog.end - u.fog.start));
 #elifdef FOG_EXP
-	const auto fogFact = metal::saturate(metal::exp(-u.fog.density * dist));
+	const auto fogFact = metal::max(metal::exp(-u.fog.density * in.eyeZ), 0.0);
 #elifdef FOG_EXP2
-	const auto dc = u.fog.density * dist;
-	const auto fogFact = metal::saturate(metal::exp(-dc * dc));
+	const auto fogFact = metal::exp(-(u.fog.density * u.fog.density * in.eyeZ * in.eyeZ));
 #endif
 
 	half4 color = texture.sample(sampler, in.texCoord);
