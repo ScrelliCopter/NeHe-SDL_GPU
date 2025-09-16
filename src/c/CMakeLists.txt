@@ -17,4 +17,4 @@ add_lesson(lesson16 SOURCES lesson16.c SHADERS
 	lesson16_unlit_exp lesson16_unlit_exp2 lesson16_unlit_lin
 	lesson16_lit_exp   lesson16_lit_exp2   lesson16_lit_lin
 	DATA Crate.bmp)
-add_lesson(lesson17 SOURCES lesson17.c SHADERS lesson6 DATA Font.bmp Bumps.bmp)
+add_lesson(lesson17 SOURCES lesson17.c SHADERS lesson6 lesson17 DATA Font.bmp Bumps.bmp)
