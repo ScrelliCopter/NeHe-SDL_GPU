@@ -7,6 +7,7 @@
 #include <SDL3/SDL.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <float.h>
 
 #if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)) && __STDC_VERSION__ == 199901L
 # define NEHE_STATIC_ASSERT(NAME, CONDITION) \

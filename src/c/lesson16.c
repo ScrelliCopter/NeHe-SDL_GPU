@@ -4,7 +4,6 @@
  */
 
 #include "nehe.h"
-#include <float.h>
 
 
 typedef struct
