@@ -50,11 +50,14 @@ def main():
 		if lesson_min:
 			out.write(f"""static bool Lesson{lesson_num}_Init(NeHeContext* restrict ctx)
 {{
+\t
+
 	return true;
 }}
 
 static void Lesson{lesson_num}_Quit(NeHeContext* restrict ctx)
 {{
+\t
 }}
 
 """)
