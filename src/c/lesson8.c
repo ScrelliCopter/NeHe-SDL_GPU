@@ -353,10 +353,10 @@ static void Lesson8_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restri
 
 	const bool* keys = SDL_GetKeyboardState(NULL);
 
-	if (keys[SDL_SCANCODE_UP])   { xSpeed -= 0.01f; }
-	if (keys[SDL_SCANCODE_DOWN]) { xSpeed += 0.01f; }
-	if (keys[SDL_SCANCODE_RIGHT]) { ySpeed += 0.1f; }
-	if (keys[SDL_SCANCODE_LEFT])  { ySpeed -= 0.1f; }
+	if (keys[SDL_SCANCODE_UP])    { xSpeed -= 0.01f; }
+	if (keys[SDL_SCANCODE_DOWN])  { xSpeed += 0.01f; }
+	if (keys[SDL_SCANCODE_RIGHT]) { ySpeed += 0.01f; }
+	if (keys[SDL_SCANCODE_LEFT])  { ySpeed -= 0.01f; }
 	if (keys[SDL_SCANCODE_PAGEUP])   { z -= 0.02f; }
 	if (keys[SDL_SCANCODE_PAGEDOWN]) { z += 0.02f; }
 
