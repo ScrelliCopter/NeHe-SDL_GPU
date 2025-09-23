@@ -255,14 +255,6 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 	objIdxCounts[OBJECT_CUBE] = SDL_arraysize(cubeIndices);
 
 	// Pre-generate static quadratics
-	Quad_Sphere(&quadratic, 1.3f, 32, 32);
-	objIdxCounts[OBJECT_SPHERE] = quadratic.numIndices;
-	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_SPHERE], &objIdxBuffers[OBJECT_SPHERE],
-		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
-		quadratic.indices, sizeof(QuadVertexNormalTexture) * quadratic.numIndices))
-	{
-		return false;
-	}
 	Quad_Cylinder(&quadratic, 1.0f, 1.0f, 3.0f, 32, 32);
 	objIdxCounts[OBJECT_CYLINDER] = quadratic.numIndices;
 	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_CYLINDER], &objIdxBuffers[OBJECT_CYLINDER],
@@ -271,9 +263,25 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 	{
 		return false;
 	}
+	Quad_Disc(&quadratic, 0.5f, 1.5f, 32, 32);
+	objIdxCounts[OBJECT_DISC] = quadratic.numIndices;
+	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_DISC], &objIdxBuffers[OBJECT_DISC],
+		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
+		quadratic.indices, sizeof(QuadVertexNormalTexture) * quadratic.numIndices))
+	{
+		return false;
+	}
 	Quad_Cylinder(&quadratic, 1.0f, 0.0f, 3.0f, 32, 32);
 	objIdxCounts[OBJECT_CONE] = quadratic.numIndices;
 	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_CONE], &objIdxBuffers[OBJECT_CONE],
+		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
+		quadratic.indices, sizeof(QuadVertexNormalTexture) * quadratic.numIndices))
+	{
+		return false;
+	}
+	Quad_Sphere(&quadratic, 1.3f, 32, 32);
+	objIdxCounts[OBJECT_SPHERE] = quadratic.numIndices;
+	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_SPHERE], &objIdxBuffers[OBJECT_SPHERE],
 		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
 		quadratic.indices, sizeof(QuadVertexNormalTexture) * quadratic.numIndices))
 	{

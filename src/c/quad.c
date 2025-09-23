@@ -10,7 +10,9 @@
 
 // Matches max segments allowed by GLU
 #define CACHE_SIZE 240
-#define TAU (2.0f * SDL_PI_F)
+
+static const float tau = 2.0f * SDL_PI_F;
+static const float deg2rad = SDL_PI_F / 180.f;
 
 
 static void Quad_ComputeStorageRequirementsGenericQuadrilateral(Quadric* restrict q, int numSlices, int numStacks)
@@ -25,23 +27,23 @@ static void Quad_ComputeStorageRequirementsGenericQuadrilateral(Quadric* restric
 	q->numIndices  = numIndices;
 }
 
-static unsigned Quad_GenerateIndicesGenericQuadrilateral(unsigned first,
-	Quadric* restrict q, int numSlices, int numStacks, bool flip)
+static unsigned Quad_GenerateIndicesGenericQuadrilateral(QuadIndex vtxOffset,
+	QuadIndex* restrict indices, int numSlices, int numStacks, bool flip)
 {
-	unsigned curIdx = first;
+	unsigned curIdx = 0;
 	for (unsigned stack = 0; stack < (unsigned)numStacks; ++stack)
 	{
 		const unsigned stack0 = (unsigned)(numSlices + 1) * (flip ? stack : stack + 1);
 		const unsigned stack1 = (unsigned)(numSlices + 1) * (flip ? stack + 1 : stack);
 		for (unsigned slice = 0; slice < (unsigned)numSlices; ++slice)
 		{
-			q->indices[curIdx++] = stack0 + slice;
-			q->indices[curIdx++] = stack1 + slice;
-			q->indices[curIdx++] = stack1 + slice + 1;
+			indices[curIdx++] = vtxOffset + stack0 + slice;
+			indices[curIdx++] = vtxOffset + stack1 + slice;
+			indices[curIdx++] = vtxOffset + stack1 + slice + 1;
 
-			q->indices[curIdx++] = stack1 + slice + 1;
-			q->indices[curIdx++] = stack0 + slice + 1;
-			q->indices[curIdx++] = stack0 + slice;
+			indices[curIdx++] = vtxOffset + stack1 + slice + 1;
+			indices[curIdx++] = vtxOffset + stack0 + slice + 1;
+			indices[curIdx++] = vtxOffset + stack0 + slice;
 		}
 	}
 
@@ -76,7 +78,7 @@ void Quad_Cylinder(Quadric* q, float baseRadius, float topRadius, float height, 
 	cosCache[0] = cosCache[numSlices] = 1.0f;
 	for (int slice = 1; slice < numSlices; ++slice)
 	{
-		const float theta = TAU * sliceStep * (float)slice;
+		const float theta = tau * sliceStep * (float)slice;
 		sinCache[slice] = SDL_sinf(theta);
 		cosCache[slice] = SDL_cosf(theta);
 	}
@@ -112,13 +114,128 @@ void Quad_Cylinder(Quadric* q, float baseRadius, float topRadius, float height, 
 			};
 		}
 	}
+	SDL_assert(q->numVertices == (unsigned)curVtx);
 
 	// Generate indices
-	unsigned curIdx = Quad_GenerateIndicesGenericQuadrilateral(0, q, numSlices, numStacks, false);
-
-	SDL_assert(q->numVertices == (unsigned)curVtx);
+	const unsigned curIdx = Quad_GenerateIndicesGenericQuadrilateral(0, q->indices, numSlices, numStacks, true);
 	SDL_assert(q->numIndices == curIdx);
 }
+
+void Quad_DiscPartial(Quadric* q, float innerRadius, float outerRadius, int numSlices, int numLoops,
+	float startAngle, float sweepAngle)
+{
+	float sinCache[CACHE_SIZE], cosCache[CACHE_SIZE];
+
+	// Sanity check inputs
+	SDL_assert(numSlices >= 2);
+	SDL_assert(numLoops >= 1);
+	SDL_assert(outerRadius > 0.0f);
+	SDL_assert(innerRadius >= 0.0f);
+
+	// Clamp slices to cache size
+	numSlices = SDL_min(numSlices, CACHE_SIZE - 1);
+
+	// Does our disc have a hole? Else we are drawing a filled disc
+	const bool hasHole = innerRadius > 0.0f;
+
+	// Calculate required storage for mesh
+	unsigned numVertices, numIndices;
+	if (hasHole)
+	{
+		numVertices = ((unsigned)numLoops + 1) * ((unsigned)numSlices + 1);
+		numIndices = 6 * (unsigned)numLoops * (unsigned)numSlices;
+	}
+	else
+	{
+		numVertices = 1 + (unsigned)numLoops * ((unsigned)numSlices + 1);
+		numIndices = 3 * (unsigned)numSlices + 6 * (unsigned)(numLoops - 1) * (unsigned)numSlices;
+	}
+	SDL_assert(numVertices <= q->vertexCapacity);
+	SDL_assert(numIndices <= q->indexCapacity);
+	q->numVertices = numVertices;
+	q->numIndices  = numIndices;
+
+	// Clamp angles
+	if (sweepAngle < -360.f || sweepAngle > 360.f) { sweepAngle = 360.f; }
+	else if (sweepAngle < 0.f)
+	{
+		startAngle += sweepAngle;
+		sweepAngle = -sweepAngle;
+	}
+
+	const float sliceStep = 1.0f / (float)numSlices;
+	const float loopStep = 1.0f / (float)numLoops;
+
+	const float deltaRadius = outerRadius - innerRadius;
+	const float angleOffset = deg2rad * startAngle;
+
+	// Pre-compute radial disc vectors
+	for (int slice = 0; slice <= numSlices; ++slice)
+	{
+		const float theta = angleOffset + deg2rad * sweepAngle * sliceStep * (float)slice;
+		sinCache[slice] = SDL_sinf(theta);
+		cosCache[slice] = SDL_cosf(theta);
+	}
+	if (sweepAngle == 360.0f)
+	{
+		sinCache[numSlices] = sinCache[0];
+		cosCache[numSlices] = cosCache[0];
+	}
+
+	// Generate vertices
+	QuadIndex curVtx = 0;
+	QuadVertexNormalTexture* vertices = (QuadVertexNormalTexture*)q->vertexData;
+	if (!hasHole)
+	{
+		// Centre point
+		vertices[curVtx++] = (QuadVertexNormalTexture)
+		{
+			.x = 0.0f, .y = 0.0f, .z = 0.0f,
+			.nx = 0.0f, .ny = 0.0f, .nz = 1.0f,
+			.u = 0.5f, .v = 0.5f
+		};
+		--numLoops;  // Draw one less loop as quads
+	}
+	for (int loop = 0; loop <= numLoops; ++loop)
+	{
+		const float radius = outerRadius - deltaRadius * loopStep * (float)loop;
+		const float texScale = radius / outerRadius * 0.5f;
+		for (int slice = 0; slice <= numSlices; ++slice)
+		{
+			const float sinSlice = sinCache[slice];
+			const float cosSlice = cosCache[slice];
+			vertices[curVtx++] = (QuadVertexNormalTexture)
+			{
+				.x = radius * sinSlice,
+				.y = radius * cosSlice,
+				.z = 0.0f,
+				.nx = 0.0f, .ny = 0.0f, .nz = 1.0f,
+				.u = 0.5f + texScale * sinSlice,
+				.v = 0.5f + texScale * cosSlice
+			};
+		}
+	}
+	SDL_assert(numVertices == (unsigned)curVtx);
+
+	// Generate indices
+	unsigned curIdx = 0;
+	if (!hasHole)
+	{
+		// Draw innermost loop as triangles
+		const QuadIndex loopStart = curVtx - (QuadIndex)(numSlices - 1);
+		for (int slice = numSlices - 1; slice >= 0; --slice)
+		{
+			q->indices[curIdx++] = 0;
+			q->indices[curIdx++] = loopStart + 1 + (unsigned)slice;
+			q->indices[curIdx++] = loopStart + 0 + (unsigned)slice;
+		}
+	}
+	const QuadIndex vtxBeg = hasHole ? 0 : 1;  // Offset by centre vertex when drawing filled discs
+	curIdx += Quad_GenerateIndicesGenericQuadrilateral(vtxBeg, &q->indices[curIdx], numSlices, numLoops, true);
+	SDL_assert(numIndices == curIdx);
+}
+
+extern inline void Quad_Disc(Quadric* q, float innerRadius, float outerRadius, int numSlices, int numLoops);
 
 void Quad_Sphere(Quadric* q, float radius, int numSlices, int numStacks)
 {
@@ -156,7 +273,7 @@ void Quad_Sphere(Quadric* q, float radius, int numSlices, int numStacks)
 	cosSliceCache[0] = cosSliceCache[numSlices] = 1.0f;
 	for (int slice = 1; slice < numSlices; ++slice)
 	{
-		const float theta = TAU * sliceStep * (float)slice;
+		const float theta = tau * sliceStep * (float)slice;
 		sinSliceCache[slice] = SDL_sinf(theta);
 		cosSliceCache[slice] = SDL_cosf(theta);
 	}
@@ -185,10 +302,9 @@ void Quad_Sphere(Quadric* q, float radius, int numSlices, int numStacks)
 			};
 		}
 	}
+	SDL_assert(q->numVertices == (unsigned)curVtx);
 
 	// Generate indices
-	unsigned curIdx = Quad_GenerateIndicesGenericQuadrilateral(0, q, numSlices, numStacks, true);
-
-	SDL_assert(q->numVertices == (unsigned)curVtx);
+	const unsigned curIdx = Quad_GenerateIndicesGenericQuadrilateral(0, q->indices, numSlices, numStacks, false);
 	SDL_assert(q->numIndices == curIdx);
 }
