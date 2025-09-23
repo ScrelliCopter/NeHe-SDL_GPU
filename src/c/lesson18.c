@@ -263,6 +263,22 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 	{
 		return false;
 	}
+	Quad_Cylinder(&quadratic, 1.0f, 1.0f, 3.0f, 32, 32);
+	objIdxCounts[OBJECT_CYLINDER] = quadratic.numIndices;
+	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_CYLINDER], &objIdxBuffers[OBJECT_CYLINDER],
+		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
+		quadratic.indices, sizeof(QuadVertexNormalTexture) * quadratic.numIndices))
+	{
+		return false;
+	}
+	Quad_Cylinder(&quadratic, 1.0f, 0.0f, 3.0f, 32, 32);
+	objIdxCounts[OBJECT_CONE] = quadratic.numIndices;
+	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_CONE], &objIdxBuffers[OBJECT_CONE],
+		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
+		quadratic.indices, sizeof(QuadVertexNormalTexture) * quadratic.numIndices))
+	{
+		return false;
+	}
 
 	return true;
 }
@@ -336,6 +352,7 @@ static void Lesson18_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	Mtx_Rotate(&model, yRot, 0.0f, 1.0f, 0.0f);
 	if (object == OBJECT_CYLINDER || object == OBJECT_CONE)
 	{
+		// Centre cylinder & cone
 		Mtx_Translate(&model, 0.0f, 0.0f, -1.5f);
 	}
 

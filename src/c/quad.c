@@ -10,7 +10,115 @@
 
 // Matches max segments allowed by GLU
 #define CACHE_SIZE 240
+#define TAU (2.0f * SDL_PI_F)
 
+
+static void Quad_ComputeStorageRequirementsGenericQuadrilateral(Quadric* restrict q, int numSlices, int numStacks)
+{
+	const unsigned numVertices = ((unsigned)numStacks + 1) * ((unsigned)numSlices + 1);
+	const unsigned numIndices = 6 * (unsigned)numStacks * (unsigned)numSlices;
+
+	SDL_assert(numVertices <= q->vertexCapacity);
+	SDL_assert(numIndices <= q->indexCapacity);
+
+	q->numVertices = numVertices;
+	q->numIndices  = numIndices;
+}
+
+static unsigned Quad_GenerateIndicesGenericQuadrilateral(unsigned first,
+	Quadric* restrict q, int numSlices, int numStacks, bool flip)
+{
+	unsigned curIdx = first;
+	for (unsigned stack = 0; stack < (unsigned)numStacks; ++stack)
+	{
+		const unsigned stack0 = (unsigned)(numSlices + 1) * (flip ? stack : stack + 1);
+		const unsigned stack1 = (unsigned)(numSlices + 1) * (flip ? stack + 1 : stack);
+		for (unsigned slice = 0; slice < (unsigned)numSlices; ++slice)
+		{
+			q->indices[curIdx++] = stack0 + slice;
+			q->indices[curIdx++] = stack1 + slice;
+			q->indices[curIdx++] = stack1 + slice + 1;
+
+			q->indices[curIdx++] = stack1 + slice + 1;
+			q->indices[curIdx++] = stack0 + slice + 1;
+			q->indices[curIdx++] = stack0 + slice;
+		}
+	}
+
+	return curIdx;
+}
+
+void Quad_Cylinder(Quadric* q, float baseRadius, float topRadius, float height, int numSlices, int numStacks)
+{
+	float sinCache[CACHE_SIZE], cosCache[CACHE_SIZE];
+
+	// Sanity check inputs
+	SDL_assert(numSlices >= 2);
+	SDL_assert(numStacks >= 1);
+	SDL_assert(baseRadius >= 0.0f);
+	SDL_assert(topRadius >= 0.0f);
+	SDL_assert(height >= 0.0f);
+
+	// Clamp slices to cache size
+	numSlices = SDL_min(numSlices, CACHE_SIZE - 1);
+
+	// Calculate required storage for mesh
+	Quad_ComputeStorageRequirementsGenericQuadrilateral(q, numSlices, numStacks);
+
+	const float deltaRadius = baseRadius - topRadius;
+	const float len = SDL_sqrtf(deltaRadius * deltaRadius + height * height);
+	SDL_assert(len != 0.0f);
+	const float sliceStep = 1.0f / (float)numSlices;
+	const float stackStep = 1.0f / (float)numStacks;
+
+	// Pre-compute cylinder vectors
+	sinCache[0] = sinCache[numSlices] = 0.0f;
+	cosCache[0] = cosCache[numSlices] = 1.0f;
+	for (int slice = 1; slice < numSlices; ++slice)
+	{
+		const float theta = TAU * sliceStep * (float)slice;
+		sinCache[slice] = SDL_sinf(theta);
+		cosCache[slice] = SDL_cosf(theta);
+	}
+
+	// Compute normal direction for cones
+	const float invLen = 1.0f / len;
+	const float normalZ = deltaRadius * invLen;
+	const float sliceNormalScale = height * invLen;
+
+	// Generate vertices
+	QuadIndex curVtx = 0;
+	QuadVertexNormalTexture* vertices = (QuadVertexNormalTexture*)q->vertexData;
+	for (int stack = 0; stack <= numStacks; ++stack)
+	{
+		const float radius = baseRadius - deltaRadius * stackStep * (float)stack;
+		const float z = stackStep * height * (float)stack;
+
+		for (int slice = 0; slice <= numSlices; ++slice)
+		{
+			const float sinSlice = sinCache[slice];
+			const float cosSlice = cosCache[slice];
+
+			vertices[curVtx++] = (QuadVertexNormalTexture)
+			{
+				.x = radius * sinSlice,
+				.y = radius * cosSlice,
+				.z = z,
+				.nx = sliceNormalScale * sinSlice,
+				.ny = sliceNormalScale * cosSlice,
+				.nz = normalZ,
+				.u = 1.0f - sliceStep * (float)slice,
+				.v = stackStep * (float)stack
+			};
+		}
+	}
+
+	// Generate indices
+	unsigned curIdx = Quad_GenerateIndicesGenericQuadrilateral(0, q, numSlices, numStacks, false);
+
+	SDL_assert(q->numVertices == (unsigned)curVtx);
+	SDL_assert(q->numIndices == curIdx);
+}
 
 void Quad_Sphere(Quadric* q, float radius, int numSlices, int numStacks)
 {
@@ -27,12 +135,10 @@ void Quad_Sphere(Quadric* q, float radius, int numSlices, int numStacks)
 	numStacks = SDL_min(numSlices, CACHE_SIZE - 1);
 
 	// Calculate required storage for mesh
-	const unsigned numVertices = ((unsigned)numStacks + 1) * ((unsigned)numSlices + 1);
-	const unsigned numIndices = 6 * (unsigned)numStacks * (unsigned)numSlices;
-	SDL_assert(numVertices <= q->vertexCapacity);
-	SDL_assert(numIndices <= q->indexCapacity);
-	q->numVertices = numVertices;
-	q->numIndices  = numIndices;
+	Quad_ComputeStorageRequirementsGenericQuadrilateral(q, numSlices, numStacks);
+
+	const float stackStep = 1.0f / (float)numStacks;
+	const float sliceStep = 1.0f / (float)numSlices;
 
 	// Pre-compute stack vectors
 	sinStackCache[0] = sinStackCache[numSlices] = 0.0f;
@@ -40,7 +146,7 @@ void Quad_Sphere(Quadric* q, float radius, int numSlices, int numStacks)
 	cosStackCache[numSlices] = -1.0f;
 	for (int stack = 1; stack < numStacks; ++stack)
 	{
-		float theta = SDL_PI_F * (float)stack / (float)numStacks;
+		const float theta = SDL_PI_F * stackStep * (float)stack;
 		sinStackCache[stack] = SDL_sinf(theta);
 		cosStackCache[stack] = SDL_cosf(theta);
 	}
@@ -50,13 +156,10 @@ void Quad_Sphere(Quadric* q, float radius, int numSlices, int numStacks)
 	cosSliceCache[0] = cosSliceCache[numSlices] = 1.0f;
 	for (int slice = 1; slice < numSlices; ++slice)
 	{
-		float theta = (2.0f * SDL_PI_F) * (float)slice / (float)numSlices;
+		const float theta = TAU * sliceStep * (float)slice;
 		sinSliceCache[slice] = SDL_sinf(theta);
 		cosSliceCache[slice] = SDL_cosf(theta);
 	}
-
-	const float stackStep = 1.0f / (float)numStacks;
-	const float sliceStep = 1.0f / (float)numSlices;
 
 	// Generate vertices
 	QuadIndex curVtx = 0;
@@ -84,28 +187,8 @@ void Quad_Sphere(Quadric* q, float radius, int numSlices, int numStacks)
 	}
 
 	// Generate indices
-	unsigned curIdx = 0;
-	for (unsigned stack = 0; stack < (unsigned)numStacks; ++stack)
-	{
-		const unsigned stack0 = (unsigned)(numSlices + 1) * stack;
-		const unsigned stack1 = (unsigned)(numSlices + 1) * (stack + 1);
-		for (unsigned slice = 0; slice < (unsigned)numSlices; ++slice)
-		{
-			const QuadIndex i00 = stack1 + slice;
-			const QuadIndex i10 = stack1 + slice + 1;
-			const QuadIndex i01 = stack0 + slice;
-			const QuadIndex i11 = stack0 + slice + 1;
+	unsigned curIdx = Quad_GenerateIndicesGenericQuadrilateral(0, q, numSlices, numStacks, true);
 
-			q->indices[curIdx++] = i00;
-			q->indices[curIdx++] = i01;
-			q->indices[curIdx++] = i11;
-
-			q->indices[curIdx++] = i11;
-			q->indices[curIdx++] = i10;
-			q->indices[curIdx++] = i00;
-		}
-	}
-
-	SDL_assert(numVertices == (unsigned)curVtx);
-	SDL_assert(numIndices == curIdx);
+	SDL_assert(q->numVertices == (unsigned)curVtx);
+	SDL_assert(q->numIndices == curIdx);
 }

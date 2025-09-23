@@ -26,6 +26,7 @@ typedef struct
 	unsigned numVertices, numIndices;
 } Quadric;
 
+void Quad_Cylinder(Quadric* q, float baseRadius, float topRadius, float height, int numSlices, int numStacks);
 void Quad_Sphere(Quadric* q, float radius, int numSlices, int numStacks);
 
 #endif//QUAD_H
