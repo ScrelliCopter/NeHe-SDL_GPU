@@ -4,16 +4,10 @@
  */
 
 #include "nehe.h"
+#include "quad.h"
 
 
-typedef struct
-{
-	float x, y, z;
-	float nx, ny, nz;
-	float u, v;
-} Vertex;
-
-static const Vertex cubeVertices[] =
+static const QuadVertexNormalTexture cubeVertices[] =
 {
 	// Front Face
 	{ -1.0f, -1.0f,  1.0f,   0.0f,  0.0f,  1.0f,  0.0f, 0.0f },
@@ -69,6 +63,8 @@ static enum Object
 	NUM_OBJECTS
 } object = OBJECT_CUBE;
 
+static Quadric quadratic;
+
 static SDL_GPUGraphicsPipeline* psoUnlit = NULL, * psoLight = NULL;
 static SDL_GPUBuffer* objVtxBuffers[NUM_OBJECTS], * objIdxBuffers[NUM_OBJECTS];
 static unsigned objIdxCounts[NUM_OBJECTS];
@@ -115,19 +111,19 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 			.location = 0,
 			.buffer_slot = 0,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
-			.offset = offsetof(Vertex, x)
+			.offset = offsetof(QuadVertexNormalTexture, x)
 		},
 		{
 			.location = 1,
 			.buffer_slot = 0,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
-			.offset = offsetof(Vertex, u)
+			.offset = offsetof(QuadVertexNormalTexture, u)
 		},
 		{
 			.location = 2,
 			.buffer_slot = 0,
 			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
-			.offset = offsetof(Vertex, nx)
+			.offset = offsetof(QuadVertexNormalTexture, nx)
 		}
 	};
 
@@ -136,7 +132,7 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 		.vertex_buffer_descriptions = &(const SDL_GPUVertexBufferDescription)
 		{
 			.slot = 0,
-			.pitch = sizeof(Vertex),
+			.pitch = sizeof(QuadVertexNormalTexture),
 			.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX
 		},
 		.num_vertex_buffers = 1,
@@ -236,6 +232,19 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 		return false;
 	}
 
+	quadratic.vertexCapacity = 1089;
+	quadratic.vertexData = SDL_malloc(sizeof(QuadVertexNormalTexture) * quadratic.vertexCapacity);
+	quadratic.indexCapacity = 0x1800;
+	quadratic.indices = (QuadIndex*)SDL_malloc(sizeof(QuadIndex) * quadratic.indexCapacity);
+	if (!quadratic.vertexData || !quadratic.indices)
+	{
+		return false;
+	}
+
+	SDL_zeroa(objVtxBuffers);
+	SDL_zeroa(objIdxBuffers);
+	SDL_zeroa(objIdxCounts);
+
 	// Upload pre-made cube
 	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_CUBE], &objIdxBuffers[OBJECT_CUBE],
 		cubeVertices, sizeof(cubeVertices),
@@ -244,6 +253,16 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 		return false;
 	}
 	objIdxCounts[OBJECT_CUBE] = SDL_arraysize(cubeIndices);
+
+	// Pre-generate static quadratics
+	Quad_Sphere(&quadratic, 1.3f, 32, 32);
+	objIdxCounts[OBJECT_SPHERE] = quadratic.numIndices;
+	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_SPHERE], &objIdxBuffers[OBJECT_SPHERE],
+		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
+		quadratic.indices, sizeof(QuadVertexNormalTexture) * quadratic.numIndices))
+	{
+		return false;
+	}
 
 	return true;
 }
@@ -255,6 +274,8 @@ static void Lesson18_Quit(NeHeContext* restrict ctx)
 		SDL_ReleaseGPUBuffer(ctx->device, objIdxBuffers[i]);
 		SDL_ReleaseGPUBuffer(ctx->device, objVtxBuffers[i]);
 	}
+	SDL_free(quadratic.indices);
+	SDL_free(quadratic.vertexData);
 	for (int i = SDL_arraysize(samplers) - 1; i > 0; --i)
 	{
 		SDL_ReleaseGPUSampler(ctx->device, samplers[i]);
