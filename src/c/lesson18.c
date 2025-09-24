@@ -51,6 +51,9 @@ static const uint16_t cubeIndices[] =
 	20, 21, 22,  22, 23, 20   // Left
 };
 
+#define QUADRIC_VERTEX_CAPACITY 1089
+#define QUADRIC_INDEX_CAPACITY  0x1800
+
 static enum Object
 {
 	OBJECT_CUBE,
@@ -62,8 +65,6 @@ static enum Object
 
 	NUM_OBJECTS
 } object = OBJECT_CUBE;
-
-static Quadric quadratic;
 
 static SDL_GPUGraphicsPipeline* psoUnlit = NULL, * psoLight = NULL;
 static SDL_GPUBuffer* objVtxBuffers[NUM_OBJECTS], * objIdxBuffers[NUM_OBJECTS];
@@ -232,15 +233,6 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 		return false;
 	}
 
-	quadratic.vertexCapacity = 1089;
-	quadratic.vertexData = SDL_malloc(sizeof(QuadVertexNormalTexture) * quadratic.vertexCapacity);
-	quadratic.indexCapacity = 0x1800;
-	quadratic.indices = (QuadIndex*)SDL_malloc(sizeof(QuadIndex) * quadratic.indexCapacity);
-	if (!quadratic.vertexData || !quadratic.indices)
-	{
-		return false;
-	}
-
 	SDL_zeroa(objVtxBuffers);
 	SDL_zeroa(objIdxBuffers);
 	SDL_zeroa(objIdxCounts);
@@ -255,6 +247,15 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 	objIdxCounts[OBJECT_CUBE] = SDL_arraysize(cubeIndices);
 
 	// Pre-generate static quadratics
+	QuadVertexNormalTexture quadricVertices[QUADRIC_VERTEX_CAPACITY];
+	QuadIndex quadricIndices[QUADRIC_INDEX_CAPACITY];
+	Quadric quadratic =
+	{
+		.vertexData = quadricVertices,
+		.indices    = quadricIndices,
+		.vertexCapacity = SDL_arraysize(quadricVertices),
+		.indexCapacity  = SDL_arraysize(quadricIndices)
+	};
 	Quad_Cylinder(&quadratic, 1.0f, 1.0f, 3.0f, 32, 32);
 	objIdxCounts[OBJECT_CYLINDER] = quadratic.numIndices;
 	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_CYLINDER], &objIdxBuffers[OBJECT_CYLINDER],
@@ -298,8 +299,6 @@ static void Lesson18_Quit(NeHeContext* restrict ctx)
 		SDL_ReleaseGPUBuffer(ctx->device, objIdxBuffers[i]);
 		SDL_ReleaseGPUBuffer(ctx->device, objVtxBuffers[i]);
 	}
-	SDL_free(quadratic.indices);
-	SDL_free(quadratic.vertexData);
 	for (int i = SDL_arraysize(samplers) - 1; i > 0; --i)
 	{
 		SDL_ReleaseGPUSampler(ctx->device, samplers[i]);
