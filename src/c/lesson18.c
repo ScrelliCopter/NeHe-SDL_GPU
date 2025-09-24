@@ -246,45 +246,45 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 	}
 	objIdxCounts[OBJECT_CUBE] = SDL_arraysize(cubeIndices);
 
-	// Pre-generate static quadratics
+	// Pre-generate static quadrics
 	QuadVertexNormalTexture quadricVertices[QUADRIC_VERTEX_CAPACITY];
 	QuadIndex quadricIndices[QUADRIC_INDEX_CAPACITY];
-	Quadric quadratic =
+	Quadric quadric =
 	{
 		.vertexData = quadricVertices,
 		.indices    = quadricIndices,
 		.vertexCapacity = SDL_arraysize(quadricVertices),
 		.indexCapacity  = SDL_arraysize(quadricIndices)
 	};
-	Quad_Cylinder(&quadratic, 1.0f, 1.0f, 3.0f, 32, 32);
-	objIdxCounts[OBJECT_CYLINDER] = quadratic.numIndices;
+	Quad_Cylinder(&quadric, 1.0f, 1.0f, 3.0f, 32, 32);
+	objIdxCounts[OBJECT_CYLINDER] = quadric.numIndices;
 	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_CYLINDER], &objIdxBuffers[OBJECT_CYLINDER],
-		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
-		quadratic.indices, sizeof(QuadIndex) * quadratic.numIndices))
+		quadric.vertexData, sizeof(QuadVertexNormalTexture) * quadric.numVertices,
+		quadric.indices, sizeof(QuadIndex) * quadric.numIndices))
 	{
 		return false;
 	}
-	Quad_Disc(&quadratic, 0.5f, 1.5f, 32, 32);
-	objIdxCounts[OBJECT_DISC] = quadratic.numIndices;
+	Quad_Disc(&quadric, 0.5f, 1.5f, 32, 32);
+	objIdxCounts[OBJECT_DISC] = quadric.numIndices;
 	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_DISC], &objIdxBuffers[OBJECT_DISC],
-		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
-		quadratic.indices, sizeof(QuadIndex) * quadratic.numIndices))
+		quadric.vertexData, sizeof(QuadVertexNormalTexture) * quadric.numVertices,
+		quadric.indices, sizeof(QuadIndex) * quadric.numIndices))
 	{
 		return false;
 	}
-	Quad_Cylinder(&quadratic, 1.0f, 0.0f, 3.0f, 32, 32);
-	objIdxCounts[OBJECT_CONE] = quadratic.numIndices;
+	Quad_Cylinder(&quadric, 1.0f, 0.0f, 3.0f, 32, 32);
+	objIdxCounts[OBJECT_CONE] = quadric.numIndices;
 	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_CONE], &objIdxBuffers[OBJECT_CONE],
-		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
-		quadratic.indices, sizeof(QuadIndex) * quadratic.numIndices))
+		quadric.vertexData, sizeof(QuadVertexNormalTexture) * quadric.numVertices,
+		quadric.indices, sizeof(QuadIndex) * quadric.numIndices))
 	{
 		return false;
 	}
-	Quad_Sphere(&quadratic, 1.3f, 32, 32);
-	objIdxCounts[OBJECT_SPHERE] = quadratic.numIndices;
+	Quad_Sphere(&quadric, 1.3f, 32, 32);
+	objIdxCounts[OBJECT_SPHERE] = quadric.numIndices;
 	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_SPHERE], &objIdxBuffers[OBJECT_SPHERE],
-		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
-		quadratic.indices, sizeof(QuadIndex) * quadratic.numIndices))
+		quadric.vertexData, sizeof(QuadVertexNormalTexture) * quadric.numVertices,
+		quadric.indices, sizeof(QuadIndex) * quadric.numIndices))
 	{
 		return false;
 	}
