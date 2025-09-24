@@ -68,6 +68,7 @@ static enum Object
 
 static SDL_GPUGraphicsPipeline* psoUnlit = NULL, * psoLight = NULL;
 static SDL_GPUBuffer* objVtxBuffers[NUM_OBJECTS], * objIdxBuffers[NUM_OBJECTS];
+static SDL_GPUTransferBuffer* objDynamicVtxXferBuffer = NULL, * objDynamicIdxXferBuffer = NULL;
 static unsigned objIdxCounts[NUM_OBJECTS];
 static SDL_GPUSampler* samplers[3] = { NULL, NULL, NULL };
 static SDL_GPUTexture* texture = NULL;
@@ -87,6 +88,8 @@ static int filter = 0;
 static float xRot = 0.0f, yRot = 0.0f;
 static float xSpeed = 0.0f, ySpeed = 0.0f;
 static float z = -5.0f;
+
+static int angleCounter = 0;
 
 
 static bool Lesson18_Init(NeHeContext* restrict ctx)
@@ -233,10 +236,6 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 		return false;
 	}
 
-	SDL_zeroa(objVtxBuffers);
-	SDL_zeroa(objIdxBuffers);
-	SDL_zeroa(objIdxCounts);
-
 	// Upload pre-made cube
 	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_CUBE], &objIdxBuffers[OBJECT_CUBE],
 		cubeVertices, sizeof(cubeVertices),
@@ -289,11 +288,51 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 		return false;
 	}
 
+	// Create GPU buffers for dynamic object
+	const unsigned dynamicVtxSize = sizeof(QuadVertexNormalTexture) * QUADRIC_VERTEX_CAPACITY;
+	const unsigned dynamicIdxSize = sizeof(QuadIndex) * QUADRIC_INDEX_CAPACITY;
+	if ((objVtxBuffers[OBJECT_DYNAMIC] = SDL_CreateGPUBuffer(ctx->device, &(const SDL_GPUBufferCreateInfo)
+	{
+		.usage = SDL_GPU_BUFFERUSAGE_VERTEX,
+		.size = dynamicVtxSize
+	})) == NULL)
+	{
+		return false;
+	}
+	if ((objIdxBuffers[OBJECT_DYNAMIC] = SDL_CreateGPUBuffer(ctx->device, &(const SDL_GPUBufferCreateInfo)
+	{
+		.usage = SDL_GPU_BUFFERUSAGE_INDEX,
+		.size = dynamicIdxSize
+	})) == NULL)
+	{
+		return false;
+	}
+
+	// Create transfer buffers for dynamic object
+	if ((objDynamicVtxXferBuffer = SDL_CreateGPUTransferBuffer(ctx->device, &(const SDL_GPUTransferBufferCreateInfo)
+	{
+		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+		.size = dynamicVtxSize
+	})) == NULL)
+	{
+		return false;
+	}
+	if ((objDynamicIdxXferBuffer = SDL_CreateGPUTransferBuffer(ctx->device, &(const SDL_GPUTransferBufferCreateInfo)
+	{
+		.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+		.size = dynamicIdxSize
+	})) == NULL)
+	{
+		return false;
+	}
+
 	return true;
 }
 
 static void Lesson18_Quit(NeHeContext* restrict ctx)
 {
+	SDL_ReleaseGPUTransferBuffer(ctx->device, objDynamicIdxXferBuffer);
+	SDL_ReleaseGPUTransferBuffer(ctx->device, objDynamicVtxXferBuffer);
 	for (int i = NUM_OBJECTS - 1; i > 0; --i)
 	{
 		SDL_ReleaseGPUBuffer(ctx->device, objIdxBuffers[i]);
@@ -341,6 +380,55 @@ static void Lesson18_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 		.stencil_store_op = SDL_GPU_STOREOP_DONT_CARE,
 		.cycle = true
 	};
+
+	if (object == OBJECT_DYNAMIC)
+	{
+		// Animate disc angle growing and shrinking like a clock hand
+		if (++angleCounter >= 720)
+		{
+			angleCounter = 0;
+		}
+		float angleStart = (angleCounter < 360)
+			? 0.0f
+			: (float)(angleCounter - 360);
+		float angleSweep = (angleCounter < 360)
+			? (float)angleCounter
+			: (float)(720 - angleCounter);
+
+		// Generate dynamic disc mesh in the transfer buffers
+		Quadric quadric =
+		{
+			.vertexData = SDL_MapGPUTransferBuffer(ctx->device, objDynamicVtxXferBuffer, true),
+			.indices    = (QuadIndex*)SDL_MapGPUTransferBuffer(ctx->device, objDynamicIdxXferBuffer, true),
+			.vertexCapacity = QUADRIC_VERTEX_CAPACITY,
+			.indexCapacity  = QUADRIC_INDEX_CAPACITY
+		};
+		SDL_assert(quadric.vertexData && quadric.indices);
+		Quad_DiscPartial(&quadric, 0.5f, 1.5f, 32, 32, angleStart, angleSweep);
+		SDL_UnmapGPUTransferBuffer(ctx->device, objDynamicIdxXferBuffer);
+		SDL_UnmapGPUTransferBuffer(ctx->device, objDynamicVtxXferBuffer);
+
+		// Update the dynamic mesh on the GPU
+		SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+		SDL_UploadToGPUBuffer(pass, &(const SDL_GPUTransferBufferLocation)
+		{
+			.transfer_buffer = objDynamicVtxXferBuffer
+		}, &(const SDL_GPUBufferRegion)
+		{
+			.buffer = objVtxBuffers[OBJECT_DYNAMIC],
+			.size = sizeof(QuadVertexNormalTexture) * quadric.numVertices
+		}, true);
+		SDL_UploadToGPUBuffer(pass, &(const SDL_GPUTransferBufferLocation)
+		{
+			.transfer_buffer = objDynamicIdxXferBuffer
+		}, &(const SDL_GPUBufferRegion)
+		{
+			.buffer = objIdxBuffers[OBJECT_DYNAMIC],
+			.size = sizeof(QuadIndex) * quadric.numIndices
+		}, true);
+		SDL_EndGPUCopyPass(pass);
+		objIdxCounts[OBJECT_DYNAMIC] = quadric.numIndices;
+	}
 
 	// Begin pass & bind pipeline state
 	SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, &depthInfo);
