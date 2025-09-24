@@ -16,7 +16,7 @@ typedef struct
 	float u, v;
 } QuadVertexNormalTexture;
 
-typedef uint32_t QuadIndex;
+typedef uint16_t QuadIndex;
 
 typedef struct
 {

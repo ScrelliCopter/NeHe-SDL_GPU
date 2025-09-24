@@ -30,21 +30,28 @@ static void Quad_ComputeStorageRequirementsGenericQuadrilateral(Quadric* restric
 static unsigned Quad_GenerateIndicesGenericQuadrilateral(QuadIndex vtxOffset,
 	QuadIndex* restrict indices, int numSlices, int numStacks, bool flip)
 {
-	unsigned curIdx = 0;
-	for (unsigned stack = 0; stack < (unsigned)numStacks; ++stack)
-	{
-		const unsigned stack0 = (unsigned)(numSlices + 1) * (flip ? stack : stack + 1);
-		const unsigned stack1 = (unsigned)(numSlices + 1) * (flip ? stack + 1 : stack);
-		for (unsigned slice = 0; slice < (unsigned)numSlices; ++slice)
-		{
-			indices[curIdx++] = vtxOffset + stack0 + slice;
-			indices[curIdx++] = vtxOffset + stack1 + slice;
-			indices[curIdx++] = vtxOffset + stack1 + slice + 1;
+	const QuadIndex stackStride = (QuadIndex)(numSlices + 1);
+	QuadIndex stack0 = vtxOffset, stack1 = vtxOffset;
+	if (flip)
+		stack1 += stackStride;
+	else
+		stack0 += stackStride;
 
-			indices[curIdx++] = vtxOffset + stack1 + slice + 1;
-			indices[curIdx++] = vtxOffset + stack0 + slice + 1;
-			indices[curIdx++] = vtxOffset + stack0 + slice;
+	unsigned curIdx = 0;
+	for (int stack = 0; stack < numStacks; ++stack)
+	{
+		for (int slice = 0; slice < numSlices; ++slice)
+		{
+			indices[curIdx++] = stack0 + (QuadIndex)slice;
+			indices[curIdx++] = stack1 + (QuadIndex)slice;
+			indices[curIdx++] = stack1 + (QuadIndex)slice + 1;
+
+			indices[curIdx++] = stack1 + (QuadIndex)slice + 1;
+			indices[curIdx++] = stack0 + (QuadIndex)slice + 1;
+			indices[curIdx++] = stack0 + (QuadIndex)slice;
 		}
+		stack0 += stackStride;
+		stack1 += stackStride;
 	}
 
 	return curIdx;
@@ -226,8 +233,8 @@ void Quad_DiscPartial(Quadric* q, float innerRadius, float outerRadius, int numS
 		for (int slice = numSlices - 1; slice >= 0; --slice)
 		{
 			q->indices[curIdx++] = 0;
-			q->indices[curIdx++] = loopStart + 1 + (unsigned)slice;
-			q->indices[curIdx++] = loopStart + 0 + (unsigned)slice;
+			q->indices[curIdx++] = loopStart + 1 + (QuadIndex)slice;
+			q->indices[curIdx++] = loopStart + 0 + (QuadIndex)slice;
 		}
 	}
 	const QuadIndex vtxBeg = hasHole ? 0 : 1;  // Offset by centre vertex when drawing filled discs

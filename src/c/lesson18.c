@@ -452,18 +452,16 @@ static void Lesson18_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	}
 
 	// Bind vertex & index buffers
-	const SDL_GPUBufferBinding vtxBinding = { objVtxBuffers[object], 0 };
-	const SDL_GPUBufferBinding idxBinding = { objIdxBuffers[object], 0 };
-	if (vtxBinding.buffer != NULL)
+	SDL_BindGPUVertexBuffers(pass, 0, &(const SDL_GPUBufferBinding)
 	{
-		SDL_BindGPUVertexBuffers(pass, 0, &vtxBinding, 1);
-	}
-	if (idxBinding.buffer != NULL)
+		.buffer = objVtxBuffers[object],
+		.offset = 0
+	}, 1);
+	SDL_BindGPUIndexBuffer(pass, &(const SDL_GPUBufferBinding)
 	{
-		SDL_BindGPUIndexBuffer(pass, &idxBinding, (object == OBJECT_CUBE)
-			? SDL_GPU_INDEXELEMENTSIZE_16BIT
-			: SDL_GPU_INDEXELEMENTSIZE_32BIT);
-	}
+		.buffer = objIdxBuffers[object],
+		.offset = 0
+	}, SDL_GPU_INDEXELEMENTSIZE_16BIT);
 	unsigned numIndices = objIdxCounts[object];
 
 	// Push shader uniforms
@@ -480,10 +478,7 @@ static void Lesson18_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	}
 
 	// Draw object
-	if (vtxBinding.buffer && idxBinding.buffer)
-	{
-		SDL_DrawGPUIndexedPrimitives(pass, numIndices, 1, 0, 0, 0);
-	}
+	SDL_DrawGPUIndexedPrimitives(pass, numIndices, 1, 0, 0, 0);
 
 	SDL_EndGPURenderPass(pass);
 
