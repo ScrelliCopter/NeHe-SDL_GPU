@@ -259,7 +259,7 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 	objIdxCounts[OBJECT_CYLINDER] = quadratic.numIndices;
 	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_CYLINDER], &objIdxBuffers[OBJECT_CYLINDER],
 		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
-		quadratic.indices, sizeof(QuadVertexNormalTexture) * quadratic.numIndices))
+		quadratic.indices, sizeof(QuadIndex) * quadratic.numIndices))
 	{
 		return false;
 	}
@@ -267,7 +267,7 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 	objIdxCounts[OBJECT_DISC] = quadratic.numIndices;
 	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_DISC], &objIdxBuffers[OBJECT_DISC],
 		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
-		quadratic.indices, sizeof(QuadVertexNormalTexture) * quadratic.numIndices))
+		quadratic.indices, sizeof(QuadIndex) * quadratic.numIndices))
 	{
 		return false;
 	}
@@ -275,7 +275,7 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 	objIdxCounts[OBJECT_CONE] = quadratic.numIndices;
 	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_CONE], &objIdxBuffers[OBJECT_CONE],
 		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
-		quadratic.indices, sizeof(QuadVertexNormalTexture) * quadratic.numIndices))
+		quadratic.indices, sizeof(QuadIndex) * quadratic.numIndices))
 	{
 		return false;
 	}
@@ -283,7 +283,7 @@ static bool Lesson18_Init(NeHeContext* restrict ctx)
 	objIdxCounts[OBJECT_SPHERE] = quadratic.numIndices;
 	if (!NeHe_CreateVertexIndexBuffer(ctx, &objVtxBuffers[OBJECT_SPHERE], &objIdxBuffers[OBJECT_SPHERE],
 		quadratic.vertexData, sizeof(QuadVertexNormalTexture) * quadratic.numVertices,
-		quadratic.indices, sizeof(QuadVertexNormalTexture) * quadratic.numIndices))
+		quadratic.indices, sizeof(QuadIndex) * quadratic.numIndices))
 	{
 		return false;
 	}
