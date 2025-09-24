@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Zlib
  */
 
-#include "quad.h"
+#include "quadric.h"
 
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_assert.h>

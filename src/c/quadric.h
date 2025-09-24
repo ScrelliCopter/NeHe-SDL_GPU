@@ -1,5 +1,5 @@
-#ifndef QUAD_H
-#define QUAD_H
+#ifndef QUADRIC_H
+#define QUADRIC_H
 
 #include <stdint.h>
 
@@ -35,4 +35,4 @@ inline void Quad_Disc(Quadric* q, float innerRadius, float outerRadius, int numS
 }
 void Quad_Sphere(Quadric* q, float radius, int numSlices, int numStacks);
 
-#endif//QUAD_H
+#endif//QUADRIC_H

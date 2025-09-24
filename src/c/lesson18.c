@@ -4,7 +4,7 @@
  */
 
 #include "nehe.h"
-#include "quad.h"
+#include "quadric.h"
 
 
 static const QuadVertexNormalTexture cubeVertices[] =
