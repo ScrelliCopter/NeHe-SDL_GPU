@@ -15,7 +15,7 @@ static const float tau = 2.0f * SDL_PI_F;
 static const float deg2rad = SDL_PI_F / 180.f;
 
 
-static void Quad_ComputeStorageRequirementsGenericQuadrilateral(Quadric* restrict q, int numSlices, int numStacks)
+static void Quad_ComputeStorageRequirementsCylindricalQuads(Quadric* restrict q, int numSlices, int numStacks)
 {
 	const unsigned numVertices = ((unsigned)numStacks + 1) * ((unsigned)numSlices + 1);
 	const unsigned numIndices = 6 * (unsigned)numStacks * (unsigned)numSlices;
@@ -28,9 +28,11 @@ static void Quad_ComputeStorageRequirementsGenericQuadrilateral(Quadric* restric
 }
 
 static unsigned Quad_GenerateIndicesGenericQuadrilateral(QuadIndex vtxOffset,
-	QuadIndex* restrict indices, int numSlices, int numStacks, bool flip)
+	QuadIndex* restrict indices, int numSlices, int numStacks, bool flip, bool contiguousSlice)
 {
-	const QuadIndex stackStride = (QuadIndex)(numSlices + 1);
+	if (contiguousSlice)
+		--numSlices;
+	const QuadIndex stackStride = (QuadIndex)numSlices + 1;
 	QuadIndex stack0 = vtxOffset, stack1 = vtxOffset;
 	if (flip)
 		stack1 += stackStride;
@@ -49,6 +51,16 @@ static unsigned Quad_GenerateIndicesGenericQuadrilateral(QuadIndex vtxOffset,
 			indices[curIdx++] = stack1 + (QuadIndex)slice + 1;
 			indices[curIdx++] = stack0 + (QuadIndex)slice + 1;
 			indices[curIdx++] = stack0 + (QuadIndex)slice;
+		}
+		if (contiguousSlice)
+		{
+			indices[curIdx++] = stack0 + (QuadIndex)numSlices;
+			indices[curIdx++] = stack1 + (QuadIndex)numSlices;
+			indices[curIdx++] = stack1;
+
+			indices[curIdx++] = stack1;
+			indices[curIdx++] = stack0;
+			indices[curIdx++] = stack0 + (QuadIndex)numSlices;
 		}
 		stack0 += stackStride;
 		stack1 += stackStride;
@@ -72,7 +84,7 @@ void Quad_Cylinder(Quadric* q, float baseRadius, float topRadius, float height, 
 	numSlices = SDL_min(numSlices, CACHE_SIZE - 1);
 
 	// Calculate required storage for mesh
-	Quad_ComputeStorageRequirementsGenericQuadrilateral(q, numSlices, numStacks);
+	Quad_ComputeStorageRequirementsCylindricalQuads(q, numSlices, numStacks);
 
 	const float deltaRadius = baseRadius - topRadius;
 	const float len = SDL_sqrtf(deltaRadius * deltaRadius + height * height);
@@ -124,7 +136,7 @@ void Quad_Cylinder(Quadric* q, float baseRadius, float topRadius, float height, 
 	SDL_assert(q->numVertices == (unsigned)curVtx);
 
 	// Generate indices
-	const unsigned curIdx = Quad_GenerateIndicesGenericQuadrilateral(0, q->indices, numSlices, numStacks, true);
+	const unsigned curIdx = Quad_GenerateIndicesGenericQuadrilateral(0, q->indices, numSlices, numStacks, true, false);
 	SDL_assert(q->numIndices == curIdx);
 }
 
@@ -142,26 +154,6 @@ void Quad_DiscPartial(Quadric* q, float innerRadius, float outerRadius, int numS
 	// Clamp slices to cache size
 	numSlices = SDL_min(numSlices, CACHE_SIZE - 1);
 
-	// Does our disc have a hole? Else we are drawing a filled disc
-	const bool hasHole = innerRadius > 0.0f;
-
-	// Calculate required storage for mesh
-	unsigned numVertices, numIndices;
-	if (hasHole)
-	{
-		numVertices = ((unsigned)numLoops + 1) * ((unsigned)numSlices + 1);
-		numIndices = 6 * (unsigned)numLoops * (unsigned)numSlices;
-	}
-	else
-	{
-		numVertices = 1 + (unsigned)numLoops * ((unsigned)numSlices + 1);
-		numIndices = 3 * (unsigned)numSlices + 6 * (unsigned)(numLoops - 1) * (unsigned)numSlices;
-	}
-	SDL_assert(numVertices <= q->vertexCapacity);
-	SDL_assert(numIndices <= q->indexCapacity);
-	q->numVertices = numVertices;
-	q->numIndices  = numIndices;
-
 	// Clamp angles
 	if (sweepAngle < -360.f || sweepAngle > 360.f) { sweepAngle = 360.f; }
 	else if (sweepAngle < 0.f)
@@ -170,6 +162,29 @@ void Quad_DiscPartial(Quadric* q, float innerRadius, float outerRadius, int numS
 		sweepAngle = -sweepAngle;
 	}
 
+	// Does our disc have a hole? Else we are drawing a filled disc
+	const bool hasHole      = innerRadius > 0.0f;
+	const bool isContiguous = sweepAngle == 360.0f;
+
+	const int vertexSlices = isContiguous ? numSlices : numSlices + 1;
+
+	// Calculate required storage for mesh
+	unsigned numVertices, numIndices;
+	if (hasHole)
+	{
+		numVertices = ((unsigned)numLoops + 1) * (unsigned)vertexSlices;
+		numIndices = 6 * (unsigned)numLoops * (unsigned)numSlices;
+	}
+	else
+	{
+		numVertices = 1 + (unsigned)numLoops * (unsigned)vertexSlices;
+		numIndices = 3 * (unsigned)numSlices + 6 * (unsigned)(numLoops - 1) * (unsigned)numSlices;
+	}
+	SDL_assert(numVertices <= q->vertexCapacity);
+	SDL_assert(numIndices <= q->indexCapacity);
+	q->numVertices = numVertices;
+	q->numIndices  = numIndices;
+
 	const float sliceStep = 1.0f / (float)numSlices;
 	const float loopStep = 1.0f / (float)numLoops;
 
@@ -177,13 +192,13 @@ void Quad_DiscPartial(Quadric* q, float innerRadius, float outerRadius, int numS
 	const float angleOffset = deg2rad * startAngle;
 
 	// Pre-compute radial disc vectors
-	for (int slice = 0; slice <= numSlices; ++slice)
+	for (int slice = 0; slice < vertexSlices; ++slice)
 	{
 		const float theta = angleOffset + deg2rad * sweepAngle * sliceStep * (float)slice;
 		sinCache[slice] = SDL_sinf(theta);
 		cosCache[slice] = SDL_cosf(theta);
 	}
-	if (sweepAngle == 360.0f)
+	if (isContiguous)
 	{
 		sinCache[numSlices] = sinCache[0];
 		cosCache[numSlices] = cosCache[0];
@@ -207,7 +222,7 @@ void Quad_DiscPartial(Quadric* q, float innerRadius, float outerRadius, int numS
 	{
 		const float radius = outerRadius - deltaRadius * loopStep * (float)loop;
 		const float texScale = radius / outerRadius * 0.5f;
-		for (int slice = 0; slice <= numSlices; ++slice)
+		for (int slice = 0; slice < vertexSlices; ++slice)
 		{
 			const float sinSlice = sinCache[slice];
 			const float cosSlice = cosCache[slice];
@@ -229,16 +244,23 @@ void Quad_DiscPartial(Quadric* q, float innerRadius, float outerRadius, int numS
 	if (!hasHole)
 	{
 		// Draw innermost loop as triangles
-		const QuadIndex loopStart = curVtx - (QuadIndex)(numSlices - 1);
-		for (int slice = numSlices - 1; slice >= 0; --slice)
+		const QuadIndex loopStart = curVtx - (QuadIndex)(numVertices - 1);
+		for (int slice = vertexSlices - 2; slice >= 0; --slice)
 		{
 			q->indices[curIdx++] = 0;
-			q->indices[curIdx++] = loopStart + 1 + (QuadIndex)slice;
-			q->indices[curIdx++] = loopStart + 0 + (QuadIndex)slice;
+			q->indices[curIdx++] = loopStart + (QuadIndex)slice + 1;
+			q->indices[curIdx++] = loopStart + (QuadIndex)slice;
+		}
+		if (isContiguous)
+		{
+			q->indices[curIdx++] = 0;
+			q->indices[curIdx++] = loopStart;
+			q->indices[curIdx++] = loopStart + (QuadIndex)numSlices - 1;
 		}
 	}
 	const QuadIndex vtxBeg = hasHole ? 0 : 1;  // Offset by centre vertex when drawing filled discs
-	curIdx += Quad_GenerateIndicesGenericQuadrilateral(vtxBeg, &q->indices[curIdx], numSlices, numLoops, true);
+	curIdx += Quad_GenerateIndicesGenericQuadrilateral(vtxBeg, &q->indices[curIdx],
+		numSlices, numLoops, true, isContiguous);
 	SDL_assert(numIndices == curIdx);
 }
 
@@ -259,7 +281,7 @@ void Quad_Sphere(Quadric* q, float radius, int numSlices, int numStacks)
 	numStacks = SDL_min(numSlices, CACHE_SIZE - 1);
 
 	// Calculate required storage for mesh
-	Quad_ComputeStorageRequirementsGenericQuadrilateral(q, numSlices, numStacks);
+	Quad_ComputeStorageRequirementsCylindricalQuads(q, numSlices, numStacks);
 
 	const float stackStep = 1.0f / (float)numStacks;
 	const float sliceStep = 1.0f / (float)numSlices;
@@ -312,6 +334,6 @@ void Quad_Sphere(Quadric* q, float radius, int numSlices, int numStacks)
 	SDL_assert(q->numVertices == (unsigned)curVtx);
 
 	// Generate indices
-	const unsigned curIdx = Quad_GenerateIndicesGenericQuadrilateral(0, q->indices, numSlices, numStacks, false);
+	const unsigned curIdx = Quad_GenerateIndicesGenericQuadrilateral(0, q->indices, numSlices, numStacks, false, false);
 	SDL_assert(q->numIndices == curIdx);
 }
