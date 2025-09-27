@@ -40,7 +40,7 @@ vertex Vertex2Fragment VertexMain(
 	return out;
 }
 
-fragment float4 FragmentMain(
+fragment half4 FragmentMain(
 	Vertex2Fragment in [[stage_in]],
 	metal::texture2d<half, metal::access::sample> texture [[texture(0)]],
 	metal::sampler sampler [[sampler(0)]])
