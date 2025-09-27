@@ -144,12 +144,127 @@ SDL_GPUTexture* NeHe_LoadTexture(NeHeContext* restrict ctx, const char* const re
 	// Flip surface if requested
 	if (flipVertical && !SDL_FlipSurface(image, SDL_FLIP_VERTICAL))
 	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_FlipSurface: %s", SDL_GetError());
 		SDL_DestroySurface(image);
 		return NULL;
 	}
 
 	// Upload texture to GPU
 	SDL_GPUTexture* texture = NeHe_CreateGPUTextureFromSurface(ctx, image, genMipmaps);
+	SDL_DestroySurface(image);
+	if (!texture)
+	{
+		return NULL;
+	}
+
+	return texture;
+}
+
+SDL_GPUTexture* NeHe_LoadTextureSeparateMask(NeHeContext* restrict ctx,
+	const char* const restrict colorResourcePath, const char* const restrict maskResourcePath,
+	bool flipVertical)
+{
+	char* colorPath = NeHe_ResourcePath(ctx, colorResourcePath);
+	char* maskPath  = NeHe_ResourcePath(ctx, maskResourcePath);
+	if (!colorPath || !maskPath)
+	{
+		SDL_free(maskPath);
+		SDL_free(colorPath);
+		return NULL;
+	}
+
+	// Load images to combine
+	SDL_Surface* color = SDL_LoadBMP(colorPath);
+	SDL_Surface* mask  = SDL_LoadBMP(maskPath);
+	SDL_free(maskPath);
+	SDL_free(colorPath);
+	if (!color || !mask)
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_LoadBMP: %s", SDL_GetError());
+		SDL_DestroySurface(mask);
+		SDL_DestroySurface(color);
+		return NULL;
+	}
+
+	// Get mask format details
+	const SDL_PixelFormatDetails* maskFmt = SDL_GetPixelFormatDetails(mask->format);
+	if (!maskFmt)
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_GetPixelFormatDetails: %s", SDL_GetError());
+		SDL_DestroySurface(mask);
+		SDL_DestroySurface(color);
+		return NULL;
+	}
+
+	int maskValueOffset, maskValueStride;
+
+	// The algorithm requires mask images with a byte-aligned 8-bit red channel
+	if (maskFmt->Rmask != 0 && maskFmt->Rbits == 8 && (maskFmt->Rshift & 0x7) == 0 &&
+		(maskFmt->bits_per_pixel >> 3) == maskFmt->bytes_per_pixel)
+	{
+		maskValueOffset = maskFmt->Rshift >> 3;
+		maskValueStride = maskFmt->bytes_per_pixel;
+	}
+	else
+	{
+		// Convert the mask to something the algorithm works with
+		SDL_Surface* newMask = SDL_ConvertSurface(mask, SDL_PIXELFORMAT_BGR24);
+		SDL_DestroySurface(mask);
+		if (!newMask)
+		{
+			SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_ConvertSurface: %s", SDL_GetError());
+			SDL_DestroySurface(color);
+			return NULL;
+		}
+		mask = newMask;
+		maskValueOffset = 0;
+		maskValueStride = 3;
+	}
+
+	// Create image from colour layer w/ alpha channel
+	SDL_Surface* image = SDL_ConvertSurface(color, SDL_PIXELFORMAT_BGRA8888);
+	SDL_DestroySurface(color);
+	if (!image)
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_ConvertSurface: %s", SDL_GetError());
+		SDL_DestroySurface(mask);
+		return NULL;
+	}
+
+	// Place an inverted copy of the mask's red channel in the image's alpha channel
+	if (!SDL_LockSurface(image) || !SDL_LockSurface(mask))
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_LockSurface: %s", SDL_GetError());
+		SDL_DestroySurface(image);
+		SDL_DestroySurface(mask);
+	}
+	Uint8* src = (Uint8*)mask->pixels;
+	Uint8* dst = (Uint8*)image->pixels;
+	const int width = SDL_min(image->w, mask->w);
+	for (int height = SDL_min(image->h, mask->h); height; height--)
+	{
+		for (int x = 0; x < width; ++x)
+		{
+			dst[4 * x] = src[maskValueStride * x + maskValueOffset] ^ 0xFF;
+		}
+		src += mask->pitch;
+		dst += image->pitch;
+	}
+	SDL_UnlockSurface(mask);
+	SDL_UnlockSurface(image);
+
+	SDL_DestroySurface(mask);  // We can now free the mask
+
+	// Flip surface if requested
+	if (flipVertical && !SDL_FlipSurface(image, SDL_FLIP_VERTICAL))
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_FlipSurface: %s", SDL_GetError());
+		SDL_DestroySurface(image);
+		return NULL;
+	}
+
+	// Upload texture to GPU
+	SDL_GPUTexture* texture = NeHe_CreateGPUTextureFromSurface(ctx, image, false);
 	SDL_DestroySurface(image);
 	if (!texture)
 	{

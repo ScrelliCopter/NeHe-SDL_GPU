@@ -61,6 +61,9 @@ void* NeHe_ReadResourceBlob(const NeHeContext* restrict ctx,
 	size_t* restrict outLength);
 SDL_GPUTexture* NeHe_LoadTexture(NeHeContext* restrict ctx, const char* restrict resourcePath,
 	bool flipVertical, bool genMipmaps);
+SDL_GPUTexture* NeHe_LoadTextureSeparateMask(NeHeContext* restrict ctx,
+	const char* restrict colorResourcePath, const char* restrict maskResourcePath,
+	bool flipVertical);
 SDL_GPUTexture* NeHe_CreateGPUTextureFromSurface(NeHeContext* restrict ctx,
 	const SDL_Surface* restrict surface, bool genMipmaps);
 SDL_GPUTexture* NeHe_CreateGPUTextureFromPixels(NeHeContext* restrict ctx, const void* restrict data,

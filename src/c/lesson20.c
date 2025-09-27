@@ -14,9 +14,8 @@ typedef struct
 } VertexUniform;
 
 
-static SDL_GPUGraphicsPipeline* pso = NULL, * psoMask = NULL, * psoBlend = NULL;
+static SDL_GPUGraphicsPipeline* pso = NULL, * psoPremultiplied = NULL, * psoAdditive = NULL;
 static SDL_GPUTexture* textureLogo = NULL;
-static SDL_GPUTexture* textureMask1 = NULL, * textureMask2 = NULL;
 static SDL_GPUTexture* textureImage1 = NULL, * textureImage2 = NULL;
 static SDL_GPUSampler* sampler = NULL;
 
@@ -69,18 +68,18 @@ static bool Lesson20_Init(NeHeContext* restrict ctx)
 		return false;
 	}
 
-	// Create masking pipeline
+	// Create pre-multiplied alpha blending pipeline
 	colorDesc.blend_state = (SDL_GPUColorTargetBlendState)
 	{
 		.enable_blend = true,
 		.color_blend_op = SDL_GPU_BLENDOP_ADD,
 		.alpha_blend_op = SDL_GPU_BLENDOP_ADD,
-		.src_color_blendfactor = SDL_GPU_BLENDFACTOR_DST_COLOR,
-		.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ZERO,
-		.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_DST_COLOR,
-		.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ZERO
+		.src_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE,
+		.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+		.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE,
+		.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA
 	};
-	if ((psoMask = SDL_CreateGPUGraphicsPipeline(ctx->device, &psoInfo)) == NULL)
+	if ((psoPremultiplied = SDL_CreateGPUGraphicsPipeline(ctx->device, &psoInfo)) == NULL)
 	{
 		SDL_ReleaseGPUShader(ctx->device, fragmentShader);
 		SDL_ReleaseGPUShader(ctx->device, vertexShader);
@@ -99,21 +98,19 @@ static bool Lesson20_Init(NeHeContext* restrict ctx)
 		.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE,
 		.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE
 	};
-	psoBlend = SDL_CreateGPUGraphicsPipeline(ctx->device, &psoInfo);
+	psoAdditive = SDL_CreateGPUGraphicsPipeline(ctx->device, &psoInfo);
 	SDL_ReleaseGPUShader(ctx->device, fragmentShader);
 	SDL_ReleaseGPUShader(ctx->device, vertexShader);
-	if (!psoBlend)
+	if (!psoAdditive)
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateGPUGraphicsPipeline: %s", SDL_GetError());
 		return false;
 	}
 
 	// Create & upload textures
-	if ((textureLogo   = NeHe_LoadTexture(ctx, "Data/Logo.bmp",   true, false)) == NULL ||
-		(textureMask1  = NeHe_LoadTexture(ctx, "Data/Mask1.bmp",  true, false)) == NULL ||
-		(textureImage1 = NeHe_LoadTexture(ctx, "Data/Image1.bmp", true, false)) == NULL ||
-		(textureMask2  = NeHe_LoadTexture(ctx, "Data/Mask2.bmp",  true, false)) == NULL ||
-		(textureImage2 = NeHe_LoadTexture(ctx, "Data/Image2.bmp", true, false)) == NULL)
+	if ((textureLogo = NeHe_LoadTexture(ctx, "Data/Logo.bmp", true, false)) == NULL ||
+		(textureImage1 = NeHe_LoadTextureSeparateMask(ctx, "Data/Image1.bmp", "Data/Mask1.bmp", true)) == NULL ||
+		(textureImage2 = NeHe_LoadTextureSeparateMask(ctx, "Data/Image2.bmp", "Data/Mask2.bmp", true)) == NULL)
 	{
 		return false;
 	}
@@ -137,12 +134,10 @@ static void Lesson20_Quit(NeHeContext* restrict ctx)
 {
 	SDL_ReleaseGPUSampler(ctx->device, sampler);
 	SDL_ReleaseGPUTexture(ctx->device, textureImage2);
-	SDL_ReleaseGPUTexture(ctx->device, textureMask2);
 	SDL_ReleaseGPUTexture(ctx->device, textureImage1);
-	SDL_ReleaseGPUTexture(ctx->device, textureMask1);
 	SDL_ReleaseGPUTexture(ctx->device, textureLogo);
-	SDL_ReleaseGPUGraphicsPipeline(ctx->device, psoBlend);
-	SDL_ReleaseGPUGraphicsPipeline(ctx->device, psoMask);
+	SDL_ReleaseGPUGraphicsPipeline(ctx->device, psoAdditive);
+	SDL_ReleaseGPUGraphicsPipeline(ctx->device, psoPremultiplied);
 	SDL_ReleaseGPUGraphicsPipeline(ctx->device, pso);
 }
 
@@ -221,20 +216,8 @@ static void Lesson20_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	}
 	SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(VertexUniform));
 
-	// Draw overlay mask
-	if (masking)
-	{
-		SDL_BindGPUGraphicsPipeline(pass, psoMask);  // Masking
-		SDL_BindGPUFragmentSamplers(pass, 0, &(const SDL_GPUTextureSamplerBinding)
-		{
-			.texture = (scene == 0) ? textureMask1 : textureMask2,
-			.sampler = sampler
-		}, 1);
-	SDL_DrawGPUPrimitives(pass, 4, 1, 0, 0);
-	}
-
-	// Draw overlay
-	SDL_BindGPUGraphicsPipeline(pass, psoBlend);  // Additive blending
+	// Draw "scene" overlay with pre-multiplied or additive blending
+	SDL_BindGPUGraphicsPipeline(pass, masking ? psoPremultiplied : psoAdditive);
 	SDL_BindGPUFragmentSamplers(pass, 0, &(const SDL_GPUTextureSamplerBinding)
 	{
 		.texture = (scene == 0) ? textureImage1 : textureImage2,
