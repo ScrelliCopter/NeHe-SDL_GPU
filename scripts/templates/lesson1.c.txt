@@ -1,0 +1,35 @@
+/*
+ * SPDX-FileCopyrightText: $copyright_text
+ * SPDX-License-Identifier: $copyright_license
+ */
+
+#include "nehe.h"
+
+$lesson_definitions$lesson_func_resize
+static void Lesson${lesson_num}_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restrict cmd,
+	SDL_GPUTexture* restrict swapchain, unsigned swapchainW, unsigned swapchainH)
+{
+	(void)swapchainW; (void)swapchainH;
+
+	const SDL_GPUColorTargetInfo colorInfo =
+	{
+		.texture = swapchain,
+		.clear_color = { 0.0f, 0.0f, 0.0f, 0.5f },
+		.load_op = SDL_GPU_LOADOP_CLEAR,
+		.store_op = SDL_GPU_STOREOP_STORE
+	};
+$lesson_struct_depth
+	SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, $lesson_pass_depth);
+	SDL_EndGPURenderPass(pass);
+}
+$lesson_func_key
+
+const struct AppConfig appConfig =
+{
+	.title = "$lesson_title",
+	.width = 640, .height = 480,$appconfig_depthfmt
+	.init = NULL,
+	.quit = NULL,
+	.resize = $appconfig_resize,
+	.draw = Lesson${lesson_num}_Draw$appconfig_key
+};
