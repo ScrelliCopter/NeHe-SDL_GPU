@@ -6,12 +6,6 @@
 #include <metal_stdlib>
 #include <simd/simd.h>
 
-struct VertexInput
-{
-	float2 position [[attribute(0)]];
-	float2 texCoord [[attribute(1)]];
-};
-
 struct VertexUniform
 {
 	metal::float4x4 modelViewProj;
@@ -24,13 +18,29 @@ struct Vertex2Fragment
 	float2 texCoord;
 };
 
+static constexpr constant float2 quadVertices[4] =
+{
+	{ -1.1f, -1.1f },  // Bottom left
+	{  1.1f, -1.1f },  // Bottom right
+	{ -1.1f,  1.1f },  // Top left
+	{  1.1f,  1.1f }   // Top right
+};
+
+static constexpr constant float2 quadTexCoords[4] =
+{
+    { 0.0f, 0.0f },  // Bottom left
+    { 1.0f, 0.0f },  // Bottom right
+    { 0.0f, 1.0f },  // Top left
+    { 1.0f, 1.0f }   // Top right
+};
+
 vertex Vertex2Fragment VertexMain(
-	VertexInput in [[stage_in]],
+	uint vertexID [[vertex_id]],
 	constant VertexUniform& u [[buffer(0)]])
 {
 	Vertex2Fragment out;
-	out.position = u.modelViewProj * float4(in.position, 0.0, 1.0);
-	out.texCoord = u.texOffset + in.texCoord * u.texScale;
+	out.position = u.modelViewProj * float4(quadVertices[vertexID], 0.0, 1.0);
+	out.texCoord = u.texOffset + quadTexCoords[vertexID] * u.texScale;
 	return out;
 }
 

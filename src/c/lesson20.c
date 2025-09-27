@@ -8,34 +8,13 @@
 
 typedef struct
 {
-	float x, y;
-	float u, v;
-} Vertex;
-
-typedef struct
-{
 	Mtx modelViewProj;
 	float texOffsetX, texOffsetY;
 	float texScaleX, texScaleY;
 } VertexUniform;
 
-static const Vertex quadVertices[4] =
-{
-	{ -1.1f, -1.1f, 0.0f, 0.0f },  // Bottom left
-	{  1.1f, -1.1f, 1.0f, 0.0f },  // Bottom right
-	{  1.1f,  1.1f, 1.0f, 1.0f },  // Top right
-	{ -1.1f,  1.1f, 0.0f, 1.0f },  // Top left
-};
-
-static const uint16_t quadIndices[6] =
-{
-	0, 1, 2,
-	2, 3, 0
-};
-
 
 static SDL_GPUGraphicsPipeline* pso = NULL, * psoMask = NULL, * psoBlend = NULL;
-static SDL_GPUBuffer* quadVtxBuffer = NULL, * quadIdxBuffer = NULL;
 static SDL_GPUTexture* textureLogo = NULL;
 static SDL_GPUTexture* textureMask1 = NULL, * textureMask2 = NULL;
 static SDL_GPUTexture* textureImage1 = NULL, * textureImage2 = NULL;
@@ -59,21 +38,6 @@ static bool Lesson20_Init(NeHeContext* restrict ctx)
 		return false;
 	}
 
-	const SDL_GPUVertexAttribute vertexAttribs[] =
-	{
-		{
-			.location = 0,
-			.buffer_slot = 0,
-			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
-			.offset = offsetof(Vertex, x)
-		},
-		{
-			.location = 1,
-			.buffer_slot = 0,
-			.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
-			.offset = offsetof(Vertex, u)
-		}
-	};
 	SDL_GPUColorTargetDescription colorDesc =
 	{
 		.format = SDL_GetGPUSwapchainTextureFormat(ctx->device, ctx->window)
@@ -82,19 +46,7 @@ static bool Lesson20_Init(NeHeContext* restrict ctx)
 	{
 		.vertex_shader = vertexShader,
 		.fragment_shader = fragmentShader,
-		.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
-		.vertex_input_state =
-		{
-			.vertex_buffer_descriptions = &(const SDL_GPUVertexBufferDescription)
-			{
-				.slot = 0,
-				.pitch = sizeof(Vertex),
-				.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX
-			},
-			.num_vertex_buffers = 1,
-			.vertex_attributes = vertexAttribs,
-			.num_vertex_attributes = SDL_arraysize(vertexAttribs)
-		},
+		.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLESTRIP,
 		.rasterizer_state =
 		{
 			.fill_mode = SDL_GPU_FILLMODE_FILL,
@@ -178,21 +130,11 @@ static bool Lesson20_Init(NeHeContext* restrict ctx)
 		return false;
 	}
 
-	// Create & upload quad mesh
-	if (!NeHe_CreateVertexIndexBuffer(ctx, &quadVtxBuffer, &quadIdxBuffer,
-		quadVertices, sizeof(quadVertices),
-		quadIndices, sizeof(quadIndices)))
-	{
-		return false;
-	}
-
 	return true;
 }
 
 static void Lesson20_Quit(NeHeContext* restrict ctx)
 {
-	SDL_ReleaseGPUBuffer(ctx->device, quadIdxBuffer);
-	SDL_ReleaseGPUBuffer(ctx->device, quadVtxBuffer);
 	SDL_ReleaseGPUSampler(ctx->device, sampler);
 	SDL_ReleaseGPUTexture(ctx->device, textureImage2);
 	SDL_ReleaseGPUTexture(ctx->device, textureMask2);
@@ -230,18 +172,6 @@ static void Lesson20_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 	// Begin pass
 	SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, NULL);
 
-	// Bind vertex & index buffers
-	SDL_BindGPUVertexBuffers(pass, 0, &(const SDL_GPUBufferBinding)
-	{
-		.buffer = quadVtxBuffer,
-		.offset = 0
-	}, 1);
-	SDL_BindGPUIndexBuffer(pass, &(const SDL_GPUBufferBinding)
-	{
-		.buffer = quadIdxBuffer,
-		.offset = 0
-	}, SDL_GPU_INDEXELEMENTSIZE_16BIT);
-
 	Mtx model = Mtx_Translation(0.0f, 0.0f, -2.0f);
 
 	// Draw logo background
@@ -260,7 +190,7 @@ static void Lesson20_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 		.texScaleY = 3.0f
 	};
 	SDL_PushGPUVertexUniformData(cmd, 0, &u, sizeof(VertexUniform));
-	SDL_DrawGPUIndexedPrimitives(pass, SDL_arraysize(quadIndices), 1, 0, 0, 0);
+	SDL_DrawGPUPrimitives(pass, 4, 1, 0, 0);
 
 	// Setup overlay uniforms
 	if (scene == 0)
@@ -300,7 +230,7 @@ static void Lesson20_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 			.texture = (scene == 0) ? textureMask1 : textureMask2,
 			.sampler = sampler
 		}, 1);
-		SDL_DrawGPUIndexedPrimitives(pass, SDL_arraysize(quadIndices), 1, 0, 0, 0);
+	SDL_DrawGPUPrimitives(pass, 4, 1, 0, 0);
 	}
 
 	// Draw overlay
@@ -310,7 +240,7 @@ static void Lesson20_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBuffer* restr
 		.texture = (scene == 0) ? textureImage1 : textureImage2,
 		.sampler = sampler
 	}, 1);
-	SDL_DrawGPUIndexedPrimitives(pass, SDL_arraysize(quadIndices), 1, 0, 0, 0);
+	SDL_DrawGPUPrimitives(pass, 4, 1, 0, 0);
 
 	SDL_EndGPURenderPass(pass);
 
