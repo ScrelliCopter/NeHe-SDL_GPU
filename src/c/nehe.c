@@ -409,6 +409,71 @@ SDL_GPUTexture* NeHe_CreateGPUTextureFromSurface(NeHeContext* restrict ctx, cons
 	return texture;
 }
 
+bool NeHe_SaveBMPScreenshot(NeHeContext* restrict ctx,
+	SDL_GPUTransferBuffer* restrict transferBuffer, int imageWidth, int imageHeight,
+	const char* restrict appName)
+{
+	SDL_assert(ctx && transferBuffer);
+	SDL_assert(imageWidth > 0 && imageHeight > 0);
+	if (!appName)
+	{
+		appName = "";
+	}
+
+	bool status = false;
+	SDL_Surface* image = NULL;
+	char* screenshotPath = NULL;
+	char* prefPath = NULL;
+	size_t screenshotPathLen;
+
+	void* pixels = SDL_MapGPUTransferBuffer(ctx->device, transferBuffer, false);
+	if (!pixels)
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_MapGPUTransferBuffer: %s", SDL_GetError());
+		goto ScreenshotFail;
+	}
+	if ((image = SDL_CreateSurfaceFrom(imageWidth, imageHeight, SDL_PIXELFORMAT_BGRA32,
+		pixels, 4 * imageWidth)) == NULL)
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateSurfaceFrom: %s", SDL_GetError());
+		goto ScreenshotFail;
+	}
+
+	// Get screenshot output path
+	if ((prefPath = SDL_GetPrefPath("a dinosaur", "NeHe SDL_GPU")) == NULL)
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_GetPrefPath: %s", SDL_GetError());
+		goto ScreenshotFail;
+	}
+	screenshotPathLen = SDL_strlen(prefPath) + SDL_strlen(appName) + 25;
+	if ((screenshotPath = (char*)SDL_malloc(screenshotPathLen)) == NULL)
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "NeHe_SaveBMPScreenshot: SDL_malloc returned NULL");
+		goto ScreenshotFail;
+	}
+
+	SDL_Time time;
+	SDL_DateTime dt;
+	SDL_GetCurrentTime(&time);
+	SDL_TimeToDateTime(time, &dt, true);
+	SDL_snprintf(screenshotPath, screenshotPathLen, "%s%04d-%02d-%02d %02d-%02d-%02d %s.bmp",
+		prefPath, dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, appName);
+
+	// Write screenshot to BMP
+	if (!SDL_SaveBMP(image, screenshotPath))
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_SaveBMP: %s", SDL_GetError());
+		goto ScreenshotFail;
+	}
+
+	status = true;
+ScreenshotFail:
+	SDL_DestroySurface(image);
+	SDL_free(screenshotPath);
+	SDL_free(prefPath);
+	return status;
+}
+
 static char* ReadBlob(const char* const restrict path, size_t* restrict outLength)
 {
 	SDL_ClearError();

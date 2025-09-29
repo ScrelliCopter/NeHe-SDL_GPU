@@ -68,6 +68,9 @@ SDL_GPUTexture* NeHe_CreateGPUTextureFromSurface(NeHeContext* restrict ctx,
 	const SDL_Surface* restrict surface, bool genMipmaps);
 SDL_GPUTexture* NeHe_CreateGPUTextureFromPixels(NeHeContext* restrict ctx, const void* restrict data,
 	size_t dataSize, const SDL_GPUTextureCreateInfo* restrict createInfo, bool genMipmaps);
+bool NeHe_SaveBMPScreenshot(NeHeContext* restrict ctx,
+	SDL_GPUTransferBuffer* restrict transferBuffer, int imageWidth, int imageHeight,
+	const char* restrict appName);
 bool NeHe_LoadShaders(NeHeContext* restrict ctx,
 	SDL_GPUShader** restrict outVertex,
 	SDL_GPUShader** restrict outFragment,

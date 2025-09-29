@@ -12,6 +12,7 @@ typedef struct
 {
 	NeHeContext ctx;
 	bool fullscreen;
+	bool screenShot;
 } AppState;
 
 SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char* argv[])
@@ -40,7 +41,8 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char* argv[])
 			.window = NULL,
 			.device = NULL
 		},
-		.fullscreen = false
+		.fullscreen = false,
+		.screenShot = false
 	};
 	NeHeContext* ctx = &s->ctx;
 	ctx->baseDir = SDL_GetBasePath();  // Resources directory
@@ -75,8 +77,8 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char* argv[])
 
 SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
 {
-	NeHeContext* ctx = &((AppState*)appstate)->ctx;
-	SDL_GPUCommandBuffer* cmdbuf = SDL_AcquireGPUCommandBuffer(ctx->device);
+	AppState* s = (AppState*)appstate;
+	SDL_GPUCommandBuffer* cmdbuf = SDL_AcquireGPUCommandBuffer(s->ctx.device);
 	if (!cmdbuf)
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_AcquireGPUCommandBuffer: %s", SDL_GetError());
@@ -85,7 +87,7 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
 
 	SDL_GPUTexture* swapchainTex = NULL;
 	uint32_t swapchainWidth, swapchainHeight;
-	if (!SDL_WaitAndAcquireGPUSwapchainTexture(cmdbuf, ctx->window, &swapchainTex, &swapchainWidth, &swapchainHeight))
+	if (!SDL_WaitAndAcquireGPUSwapchainTexture(cmdbuf, s->ctx.window, &swapchainTex, &swapchainWidth, &swapchainHeight))
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_WaitAndAcquireGPUSwapchainTexture: %s", SDL_GetError());
 		SDL_CancelGPUCommandBuffer(cmdbuf);
@@ -97,28 +99,108 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
 		return SDL_APP_CONTINUE;
 	}
 
-	if (appConfig.createDepthFormat != SDL_GPU_TEXTUREFORMAT_INVALID && ctx->depthTexture
-		&& (ctx->depthTextureWidth != swapchainWidth || ctx->depthTextureHeight != swapchainHeight))
+	if (appConfig.createDepthFormat != SDL_GPU_TEXTUREFORMAT_INVALID && s->ctx.depthTexture
+		&& (s->ctx.depthTextureWidth != swapchainWidth || s->ctx.depthTextureHeight != swapchainHeight))
 	{
-		if (!NeHe_SetupDepthTexture(ctx, swapchainWidth, swapchainHeight, appConfig.createDepthFormat, 1.0f))
+		if (!NeHe_SetupDepthTexture(&s->ctx, swapchainWidth, swapchainHeight, appConfig.createDepthFormat, 1.0f))
 		{
 			SDL_CancelGPUCommandBuffer(cmdbuf);
 			return SDL_APP_FAILURE;
 		}
 	}
 
-	if (appConfig.draw)
+	SDL_GPUTexture* screenshotTex = NULL;
+	const SDL_GPUTextureFormat swapchainFormat = SDL_GetGPUSwapchainTextureFormat(s->ctx.device, s->ctx.window);
+	if (s->screenShot)
 	{
-		appConfig.draw(ctx, cmdbuf, swapchainTex, (unsigned)swapchainWidth, (unsigned)swapchainHeight);
+		s->screenShot = false;
+
+		// Since the swapchain texture is write-only we need to render into a readable buffer
+		screenshotTex = SDL_CreateGPUTexture(s->ctx.device, &(const SDL_GPUTextureCreateInfo)
+		{
+			.format = swapchainFormat,
+			.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER,
+			.width = swapchainWidth,
+			.height = swapchainHeight,
+			.layer_count_or_depth = 1,
+			.num_levels = 1
+		});
+		if (!screenshotTex)
+		{
+			SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateGPUTexture: %s", SDL_GetError());
+		}
 	}
 
-	SDL_SubmitGPUCommandBuffer(cmdbuf);
+	if (appConfig.draw)
+	{
+		SDL_GPUTexture* backBuffer = screenshotTex ? screenshotTex : swapchainTex;
+		appConfig.draw(&s->ctx, cmdbuf, backBuffer, (unsigned)swapchainWidth, (unsigned)swapchainHeight);
+	}
+
+	SDL_GPUTransferBuffer* screenshotXferBuffer = NULL;
+	if (screenshotTex)
+	{
+		// Create screenshot transfer buffer
+		screenshotXferBuffer = SDL_CreateGPUTransferBuffer(s->ctx.device, &(const SDL_GPUTransferBufferCreateInfo)
+		{
+			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_DOWNLOAD,
+			.size = 4 * swapchainWidth * swapchainHeight
+		});
+		if (!screenshotXferBuffer)
+		{
+			SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateGPUTransferBuffer: %s", SDL_GetError());
+		}
+
+		SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(cmdbuf);
+
+		// Present the contents of the screenshot buffer
+		SDL_CopyGPUTextureToTexture(copyPass,
+			&(const SDL_GPUTextureLocation){ .texture = screenshotTex },
+			&(const SDL_GPUTextureLocation){ .texture = swapchainTex },
+			swapchainWidth, swapchainHeight, 1, false);
+
+		if (screenshotXferBuffer)
+		{
+			// Copy the screenshot buffer into the transfer buffer
+			SDL_DownloadFromGPUTexture(copyPass, &(const SDL_GPUTextureRegion)
+			{
+				.texture = screenshotTex,
+				.w = swapchainWidth,
+				.h = swapchainHeight,
+				.d = 1
+			}, &(const SDL_GPUTextureTransferInfo)
+			{
+				.transfer_buffer = screenshotXferBuffer
+			});
+		}
+
+		// Wait for render & copy to complete
+		SDL_EndGPUCopyPass(copyPass);
+		SDL_GPUFence* fence = SDL_SubmitGPUCommandBufferAndAcquireFence(cmdbuf);
+		SDL_WaitForGPUFences(s->ctx.device, true, &fence, 1);
+		SDL_ReleaseGPUFence(s->ctx.device, fence);
+		SDL_ReleaseGPUTexture(s->ctx.device, screenshotTex);
+	}
+	else
+	{
+		SDL_SubmitGPUCommandBuffer(cmdbuf);
+	}
+
+	if (screenshotXferBuffer)
+	{
+		NeHe_SaveBMPScreenshot(&s->ctx, screenshotXferBuffer, (int)swapchainWidth, (int)swapchainHeight, appConfig.title);
+
+		// Destroy the transfer buffer
+		SDL_UnmapGPUTransferBuffer(s->ctx.device, screenshotXferBuffer);
+		SDL_ReleaseGPUTransferBuffer(s->ctx.device, screenshotXferBuffer);
+	}
+
 	return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
 {
-	AppState* s = appstate;
+	AppState* s = (AppState*)appstate;
 
 	switch (event->type)
 	{
@@ -129,16 +211,20 @@ SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
 		s->fullscreen = event->type == SDL_EVENT_WINDOW_ENTER_FULLSCREEN;
 		return SDL_APP_CONTINUE;
 	case SDL_EVENT_KEY_DOWN:
-		if (event->key.key == SDLK_ESCAPE)
+		switch (event->key.key)
 		{
+		case SDLK_ESCAPE:
 			return SDL_APP_SUCCESS;
-		}
-		if (event->key.key == SDLK_F1)
-		{
+		case SDLK_F1:
 			SDL_SetWindowFullscreen(s->ctx.window, !s->fullscreen);
 			return SDL_APP_CONTINUE;
+		case SDLK_F12:
+			s->screenShot = true;
+			return SDL_APP_CONTINUE;
+		default:
+			break;
 		}
-		// Fallthrough
+		SDL_FALLTHROUGH;
 	case SDL_EVENT_KEY_UP:
 		if (appConfig.key)
 		{
