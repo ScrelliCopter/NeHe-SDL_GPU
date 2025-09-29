@@ -188,7 +188,8 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
 
 	if (screenshotXferBuffer)
 	{
-		NeHe_SaveBMPScreenshot(&s->ctx, screenshotXferBuffer, (int)swapchainWidth, (int)swapchainHeight, appConfig.title);
+		NeHe_SaveBMPScreenshot(&s->ctx, appConfig.title, screenshotXferBuffer,
+			swapchainFormat, (int)swapchainWidth, (int)swapchainHeight);
 
 		// Destroy the transfer buffer
 		SDL_UnmapGPUTransferBuffer(s->ctx.device, screenshotXferBuffer);
