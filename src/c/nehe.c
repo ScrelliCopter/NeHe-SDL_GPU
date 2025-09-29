@@ -416,6 +416,7 @@ bool NeHe_SaveBMPScreenshot(NeHeContext* restrict ctx, const char* restrict appN
 	SDL_assert(imageWidth > 0 && imageHeight > 0);
 
 	SDL_PixelFormat imageFormat;
+	int imagePitch = 4 * imageWidth;
 	switch (format)
 	{
 	case SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM:
@@ -425,6 +426,13 @@ bool NeHe_SaveBMPScreenshot(NeHeContext* restrict ctx, const char* restrict appN
 	case SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM:
 	case SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM_SRGB:
 		imageFormat = SDL_PIXELFORMAT_ABGR8888;
+		break;
+	case SDL_GPU_TEXTUREFORMAT_R16G16B16A16_FLOAT:
+		imageFormat = SDL_PIXELFORMAT_RGBA64_FLOAT;
+		imagePitch *= 2;
+		break;
+	case SDL_GPU_TEXTUREFORMAT_R10G10B10A2_UNORM:
+		imageFormat = SDL_PIXELFORMAT_ABGR2101010;
 		break;
 	default:
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "NeHe_SaveBMPScreenshot: Unsupported texture format %u", format);
@@ -448,7 +456,7 @@ bool NeHe_SaveBMPScreenshot(NeHeContext* restrict ctx, const char* restrict appN
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_MapGPUTransferBuffer: %s", SDL_GetError());
 		goto ScreenshotFail;
 	}
-	if ((image = SDL_CreateSurfaceFrom(imageWidth, imageHeight, imageFormat, pixels, 4 * imageWidth)) == NULL)
+	if ((image = SDL_CreateSurfaceFrom(imageWidth, imageHeight, imageFormat, pixels, imagePitch)) == NULL)
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateSurfaceFrom: %s", SDL_GetError());
 		goto ScreenshotFail;

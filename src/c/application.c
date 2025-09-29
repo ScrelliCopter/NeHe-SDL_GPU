@@ -141,10 +141,11 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
 	if (screenshotTex)
 	{
 		// Create screenshot transfer buffer
+		const uint32_t swapchainPixelSize = swapchainFormat == SDL_GPU_TEXTUREFORMAT_R16G16B16A16_FLOAT ? 8 : 4;
 		screenshotXferBuffer = SDL_CreateGPUTransferBuffer(s->ctx.device, &(const SDL_GPUTransferBufferCreateInfo)
 		{
 			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_DOWNLOAD,
-			.size = 4 * swapchainWidth * swapchainHeight
+			.size = swapchainWidth * swapchainHeight * swapchainPixelSize
 		});
 		if (!screenshotXferBuffer)
 		{
