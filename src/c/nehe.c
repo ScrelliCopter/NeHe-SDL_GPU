@@ -477,8 +477,16 @@ bool NeHe_SaveBMPScreenshot(NeHeContext* restrict ctx, const char* restrict appN
 
 	SDL_Time time;
 	SDL_DateTime dt;
-	SDL_GetCurrentTime(&time);
-	SDL_TimeToDateTime(time, &dt, true);
+	if (!SDL_GetCurrentTime(&time))
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_GetCurrentTime: %s", SDL_GetError());
+		goto ScreenshotFail;
+	}
+	if (!SDL_TimeToDateTime(time, &dt, true))
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_TimeToDateTime: %s", SDL_GetError());
+		goto ScreenshotFail;
+	}
 	SDL_snprintf(screenshotPath, screenshotPathLen, "%s%04d-%02d-%02d %02d-%02d-%02d %s.bmp",
 		prefPath, dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, appName);
 
