@@ -163,7 +163,7 @@ class MakefileWriter(Writer):
 
 	def generate(self):
 		macro_map = {}
-		if len(self.configure.macros):
+		if self.configure.macros:
 			left_pad = max(len(x) for x in self.configure.macros.keys())
 			for name, value in self.configure.macros.items():
 				name_upper = name.upper()
@@ -216,7 +216,7 @@ class GnuMakefileWriter(MakefileWriter):
 class NinjaWriter(Writer):
 	def generate(self):
 		macro_map = {}
-		if len(self.configure.macros):
+		if self.configure.macros:
 			for name, value in self.configure.macros.items():
 				macro_map.update({f"macro_{name}": f"${name}"})
 				print(f"{name} = {value}", file=self.out)
@@ -230,7 +230,7 @@ class NinjaWriter(Writer):
 
 		for rule in self.configure.rules:
 			print("rule", rule_name(rule.prerequisite.suffix, rule.target.suffix, rule.recipe), file=self.out)
-			print("  command =", " && ".join(Template(recipe).substitute({
+			print(" command =", " && ".join(Template(recipe).substitute({
 				"source": "$in",
 				"target": "$out",
 				"definitions": "$definitions",
@@ -244,7 +244,7 @@ class NinjaWriter(Writer):
 				rule = rule_name("".join(Path(dependency.source).suffixes), "".join(Path(dependency.target).suffixes), dependency.recipe)
 				print("build", f"{dependency.target}:", rule, dependency.source, file=self.out)
 				if dependency.definitions:
-					print("  definitions =", dependency.definitions, file=self.out)
+					print(" definitions =", dependency.definitions, file=self.out)
 		print(file=self.out)
 
 		meta_targets = self.configure.meta.keys()
@@ -266,13 +266,13 @@ class Environment(NamedTuple):
 	metal_debug: bool
 
 
-Groups = namedtuple("Groups", ["metal", "glsl", "hlsl"])
+ShaderGroups = namedtuple("Groups", ["metal", "glsl", "hlsl"])
 
 
-def find_shaders(root: Path, e: Environment, /) -> Groups:
+def find_shaders(root: Path, src_dir: Path, dest_dir: Path, /) -> ShaderGroups:
 	from configparser import ConfigParser
 	config = ConfigParser()
-	config.read(root / e.src_dir / "shaders.ini")
+	config.read(root / src_dir / "shaders.ini")
 
 	metal_shaders: set[Shader] = set()
 	glsl_shaders: set[Shader] = set()
@@ -284,10 +284,10 @@ def find_shaders(root: Path, e: Environment, /) -> Groups:
 		source = tokens[0]
 		output = line[0]
 		definitions = tokens[1:]
-		definitions = frozenset(definitions) if len(definitions) else None
+		definitions = frozenset(definitions) if definitions else None
 
-		source_path = e.src_dir / source
-		output_path = e.dest_dir / output
+		source_path = src_dir / source
+		output_path = dest_dir / output
 		msl_source = root.joinpath(source_path).with_name(f"{source}.metal")
 		glsl_source = root.joinpath(source_path).with_name(f"{source}.glsl")
 		hlsl_source = root.joinpath(source_path).with_name(f"{source}.hlsl")
@@ -308,17 +308,17 @@ def find_shaders(root: Path, e: Environment, /) -> Groups:
 		if glsl_exists and not hlsl_exists:
 			print(f"WARN: \"{glsl_source.name}\" exists but no \"{hlsl_source.name}\"")
 
-		if e.is_darwin and msl_exists:
+		if msl_exists:
 			metal_shaders.add(Shader(source_path, output_path, definitions))
 		if glsl_exists:
 			glsl_shaders.add(Shader(source_path, output_path, definitions))
 		if hlsl_exists:
 			hlsl_shaders.add(Shader(source_path, output_path, definitions))
 
-	return Groups(metal_shaders, glsl_shaders, hlsl_shaders)
+	return ShaderGroups(metal_shaders, glsl_shaders, hlsl_shaders)
 
 
-def compile_recipe(shader_groups: Groups, e: Environment) -> Configure:
+def compile_recipe(shader_groups: ShaderGroups, e: Environment) -> Configure:
 	import re
 
 	hlsl_spirv = shader_groups.hlsl - shader_groups.glsl
@@ -454,24 +454,24 @@ def build_makefiles(basedir: Path, /):
 	src_dir = Path("src/shaders")
 	dest_dir = Path("data/shaders")
 
+	groups = None
 	py_stat = os.stat(sys.argv[0])
 	ini_stat = os.stat(root / src_dir / "shaders.ini")
+	for writer, name, is_darwin, is_windows in (
+			(NinjaWriter, "build.ninja", False, False),
+			(GnuMakefileWriter, "Makefile.darwin", True, False),
+			(PosixMakefileWriter, "Makefile.unix", False, False)):
+		if (makefile_path := basedir / "shaders" / name).is_file():
+			makefile_stat = os.stat(makefile_path)
+			if makefile_stat.st_mtime >= ini_stat.st_mtime and makefile_stat.st_mtime >= py_stat.st_mtime:
+				continue
 
-	def generate_makefile(writer: Type[Writer], name: str, is_darwin: bool, is_windows: bool, /):
-		makefile_path = basedir / "shaders" / name
-		makefile_stat = os.stat(makefile_path)
-		if makefile_path.is_file() \
-				and makefile_stat.st_mtime >= ini_stat.st_mtime \
-				and makefile_stat.st_mtime >= py_stat.st_mtime:
-			return
+		if groups is None:
+			groups = find_shaders(root, src_dir, dest_dir)
 
 		e = Environment(writer, name, src_dir, dest_dir, is_darwin, is_windows, False)
 		with basedir.joinpath("shaders", e.make_name).open("w") as out:
-			e.writer(out, compile_recipe(find_shaders(root, e), e)).generate()
-
-	generate_makefile(NinjaWriter, "build.ninja", False, False)
-	generate_makefile(GnuMakefileWriter, "Makefile.darwin", True, False)
-	generate_makefile(PosixMakefileWriter, "Makefile.unix", False, False)
+			e.writer(out, compile_recipe(groups, e)).generate()
 
 
 def run_makefile(basedir: Path, /):
