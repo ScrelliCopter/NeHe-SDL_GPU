@@ -213,6 +213,49 @@ class GnuMakefileWriter(MakefileWriter):
 				macro_map, False)
 
 
+class NinjaWriter(Writer):
+	def generate(self):
+		macro_map = {}
+		if len(self.configure.macros):
+			for name, value in self.configure.macros.items():
+				macro_map.update({f"macro_{name}": f"${name}"})
+				print(f"{name} = {value}", file=self.out)
+			print(file=self.out)
+
+		def rule_name(source_suffix: str, target_suffix: str, recipe: List[str]) -> str:
+			prefix = source_suffix.replace(".", "_").strip("_")
+			suffix = target_suffix.replace(".", "_").strip("_")
+			cmds = (cmd.split(" ", 1)[0].removeprefix("$macro_") for cmd in recipe)
+			return "_".join((prefix, *cmds, suffix))
+
+		for rule in self.configure.rules:
+			print("rule", rule_name(rule.prerequisite.suffix, rule.target.suffix, rule.recipe), file=self.out)
+			print("  command =", " && ".join(Template(recipe).substitute({
+				"source": "$in",
+				"target": "$out",
+				"definitions": "$definitions",
+				**macro_map
+			}) for recipe in rule.recipe), file=self.out)
+			print(file=self.out)
+
+		dependencies = dict(self.unroll_dependencies())
+		for group in dependencies.values():
+			for dependency in group:
+				rule = rule_name("".join(Path(dependency.source).suffixes), "".join(Path(dependency.target).suffixes), dependency.recipe)
+				print("build", f"{dependency.target}:", rule, dependency.source, file=self.out)
+				if dependency.definitions:
+					print("  definitions =", dependency.definitions, file=self.out)
+		print(file=self.out)
+
+		meta_targets = self.configure.meta.keys()
+		print("build all: phony", *meta_targets, file=self.out)
+		for target, prerequisites in self.configure.meta.items():
+			print(f"build {target}: phony", *(i.output for i in prerequisites), file=self.out)
+		print(file=self.out)
+
+		print("default all", file=self.out)
+
+
 class Environment(NamedTuple):
 	writer: Type[Writer]
 	make_name: str
@@ -403,17 +446,22 @@ def build_makefiles(basedir: Path, /):
 	src_dir = Path("src/shaders")
 	dest_dir = Path("data/shaders")
 
+	py_stat = os.stat(sys.argv[0])
 	ini_stat = os.stat(root / src_dir / "shaders.ini")
 
 	def generate_makefile(writer: Type[Writer], name: str, is_darwin: bool, is_windows: bool, /):
-		makefile_stat = os.stat(basedir / "shaders" / name)
-		if makefile_stat.st_mtime >= ini_stat.st_mtime:
+		makefile_path = basedir / "shaders" / name
+		makefile_stat = os.stat(makefile_path)
+		if makefile_path.is_file() \
+				and makefile_stat.st_mtime >= ini_stat.st_mtime \
+				and makefile_stat.st_mtime >= py_stat.st_mtime:
 			return
 
 		e = Environment(writer, name, src_dir, dest_dir, is_darwin, is_windows, False)
 		with basedir.joinpath("shaders", e.make_name).open("w") as out:
 			e.writer(out, compile_recipe(find_shaders(root, e), e)).generate()
 
+	generate_makefile(NinjaWriter, "build.ninja", False, False)
 	generate_makefile(GnuMakefileWriter, "Makefile.darwin", True, False)
 	generate_makefile(PosixMakefileWriter, "Makefile.unix", False, False)
 
@@ -421,37 +469,62 @@ def build_makefiles(basedir: Path, /):
 def run_makefile(basedir: Path, /):
 	import shutil
 	import subprocess
-	import os
 	import platform
 
 	root = basedir.parent
 
+	ninja = shutil.which("ninja")
 	# Try to find cross-platform shader compilers
-	defs = {
-		"glslang": shutil.which("glslang"),
-		"dxc": shutil.which("dxc", path=f"/opt/dxc/bin:{os.environ.get('PATH', os.defpath)}"),
-	}
+	glslang = shutil.which("glslang")
+	dxc = shutil.which("dxc", path=f"/opt/dxc/bin:{os.environ.get('PATH', os.defpath)}")
+
+	def get_makefile_defs() -> dict[str, str]:
+		defs = {}
+		if glslang:
+			defs["glslang"] = glslang
+		if dxc:
+			defs["dxc"] = dxc
+		return defs
+
+	def tools_path() -> str:
+		path = []
+		if glslang:
+			path.append(str(Path(glslang).parent))
+		if dxc:
+			path.append(str(Path(dxc).parent))
+		path.append(os.environ.get('PATH', os.defpath))
+		return ":".join(path)
+
+	def run_make(makefile: str, defs: dict[str, str]):
+		make_path = basedir.joinpath("shaders", makefile).relative_to(root)
+		make_cmd = ["make", "-f", str(make_path), *(f"{k.upper()}={v}" for k, v in defs.items())]
+		subprocess.run(make_cmd, cwd=root, check=True)
+
+	def run_ninja(buildfile: str, path: str):
+		env = os.environ.copy()
+		env.update({"PATH": path})
+		build_path = basedir.joinpath("shaders", buildfile).relative_to(root)
+		subprocess.run([ninja, "-f", build_path], env=env, cwd=root, check=True)
+
 	if (system := platform.system()) == "Darwin":
 		sdk_platform = "macosx"
 		def xcrun_find_program(name: str):
 			return subprocess.run(["xcrun", "-sdk", sdk_platform, "-f", name],
 				capture_output=True, check=True).stdout.decode("utf-8").strip()
-		defs.update({
+		run_make("Makefile.darwin", {
+			**get_makefile_defs(),
 			"metalc": xcrun_find_program("metal"),
 			"metalld": xcrun_find_program("metallib"),
 			"metal_platform": "macos",
 			"metal_sdk": sdk_platform,
 			"metal_version_min": "10.11"
 		})
-		makefile = "Makefile.darwin"
 	elif system == "Windows":
 		pass
+	elif ninja:
+		run_ninja("build.ninja", tools_path())
 	else:
-		makefile = "Makefile.unix"
-
-	make_path = basedir.joinpath("shaders", makefile).relative_to(root)
-	make_cmd = ["make", "-f", str(make_path), *(f"{k.upper()}={v}" for k, v in defs.items())]
-	subprocess.run(make_cmd, cwd=root, check=True)
+		run_make("Makefile.unix", get_makefile_defs())
 
 
 def main():

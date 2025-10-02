@@ -27,3 +27,5 @@ Thumbs.db
 
 *.fxb
 /data/shaders/*.air
+
+.ninja_log
