@@ -3,293 +3,462 @@
 SPDX-FileCopyrightText: (C) 2025 a dinosaur
 SPDX-License-Identifier: Zlib
 """
-
 import os
-import shutil
 import sys
-from collections import namedtuple
+from abc import ABC, abstractmethod
+from collections import namedtuple, defaultdict
+from dataclasses import dataclass
 from pathlib import Path
-import subprocess
-import platform
-from typing import Iterable
+from string import Template
+from typing import List, TextIO, NamedTuple, Tuple, Iterable, Type
 
 
-def compile_metal_shaders(
-		sources: list[str | Path], library: str | Path,
-		cflags: list[str] = None, sdk="macosx", debug: bool = False, cwd: Path | None = None) -> None:
-	"""Build a Metal shader library from a list of Metal shaders
+class Shader(NamedTuple):
+	source: Path
+	output: Path
+	definitions: frozenset[str] | None
 
-	:param sources: List of Metal shader source paths
-	:param library: Path to the Metal library to build
-	:param cflags:  Optional list of additional compiler parameters
-	:param sdk:     Name of the Xcode platform SDK to use (default: "macosx"),
-	                can be "macosx", "iphoneos", "iphonesimulator", "appletvos", or "appletvsimulator"
-	:param debug:   Generate a symbol file that can be used to debug the shader library
-	:param cwd:     Optionally set the current working directory for the compiler
-	"""
-	if cflags is None:
-		cflags = []
+	def with_output_suffix(self, out_suffix: str, /):
+		"""Return the shader with a suffix appended to the output
 
-	def xcrun_find_program(name: str):
-		return subprocess.run(["xcrun", "-sdk", sdk, "-f", name],
-			capture_output=True, check=True).stdout.decode("utf-8").strip()
+		:param out_suffix: File extension to append to output
+		:return:           The modified shader
+		"""
+		return Shader(self.source,
+			self.output.with_name(f"{self.output.name}.{out_suffix}"),
+			self.definitions)
 
-	# Find Metal compilers
-	metal = xcrun_find_program("metal")
-	if debug:
-		metal_dsymutil = xcrun_find_program("metal-dsymutil")
-	else:
-		metallib = xcrun_find_program("metallib")
+	def definition_flags(self, flag: str = "-D") -> str | None:
+		"""Get the shader's defines as flags
 
-	# Compile each source to an AIR (Apple Intermediate Representation)
-	cflags = cflags + ["-frecord-sources"]
-	air_objects = [f"{str(s).removesuffix('.metal')}.air" for s in sources]
-	for src, obj in zip(sources, air_objects):
-		subprocess.run([metal, *cflags, "-c", src, "-o", obj], cwd=cwd, check=True)
-
-	try:
-		# Build the Metal library
-		if debug:
-			subprocess.run([metal, "-frecord-sources", "-o", library, *air_objects], cwd=cwd, check=True)
-			subprocess.run([metal_dsymutil, "-flat", "-remove-source", library], cwd=cwd, check=True)
-		else:
-			subprocess.run([metallib, "-o", library, *air_objects], cwd=cwd, check=True)
-	finally:
-		# Clean up AIR objects
-		for obj in air_objects:
-			cwd.joinpath(obj).unlink()
-
-
-Shader = namedtuple("Shader", ["source", "output", "definitions"])
+		:param flag: Override the prepended flag (defaults to "-D")
+		:return:     List of flags
+		"""
+		if self.definitions is None:
+			return None
+		return " ".join(f"{flag}{d}" for d in self.definitions)
 
 
 def shaders_suffixes(shaders: Iterable[Shader],
-		in_suffix: str | None, out_suffix: str | None) -> Iterable[Shader]:
+		in_suffix: str | None, out_suffixes: Iterable[str] | str | None = None) -> Iterable[Shader]:
 	"""Add file extensions to the source and outputs of a list of shaders
 
-	:param shaders:    The list of Shader tuples
-	:param in_suffix:  Optional file extension to append to source
-	:param out_suffix: Optional file extension to append to output
-	:return:           Generator with the modified shaders
+	:param shaders:      The list of Shader tuples
+	:param in_suffix:    Optional file extension to append to source
+	:param out_suffixes: Optional file extension(s) to append to output
+	:return:             Generator with the modified shaders
 	"""
-	for s in shaders:
-		yield Shader(
-			f"{s.source}.{in_suffix}" if in_suffix else s.source,
-			f"{s.output}.{out_suffix}" if out_suffix else s.output,
-			s.definitions)
+	import collections.abc
+	if not isinstance(out_suffixes, str) and isinstance(out_suffixes, collections.abc.Iterable):
+		for s in shaders:
+			for out_suffix in out_suffixes:
+				yield Shader(
+					Path(f"{s.source}.{in_suffix}") if in_suffix else s.source,
+					Path(f"{s.output}.{out_suffix}"),
+					s.definitions)
+	else:
+		for s in shaders:
+			yield Shader(
+				Path(f"{s.source}.{in_suffix}") if in_suffix else s.source,
+				Path(f"{s.output}.{out_suffixes}") if out_suffixes else s.output,
+				s.definitions)
 
 
-def shader_prepend_ext(shader: Shader, prep_ext: str) -> Shader:
-	"""Prepend `prep_ext` to the shader's output path's extension
-
-	:param shader:   Shader to modify
-	:param prep_ext: Extension to prepend (without the dot)
-	:return:         The modified shader
-	"""
-	out = Path(shader.output)
-	return Shader(shader.source, out.with_suffix(f".{prep_ext}{out.suffix}"), shader.definitions)
+class Pattern(NamedTuple):
+	folder: str | Path | None
+	suffix: str
 
 
-def shader_definitions(shader: Shader, flag: str = "-D") -> list[str]:
-	"""Get the provided shader's defines as flags
-
-	:param shader: Shader to read defines of
-	:param flag:   Override the prepended flag (defaults to "-D")
-	:return:       List of flags
-	"""
-	if shader.definitions is None:
-		return []
-	return [f"{flag}{d}" for d in shader.definitions]
+class Rule(NamedTuple):
+	prerequisite: Pattern
+	target: Pattern
+	recipe: List[str]
 
 
-def compile_spirv_shaders(shaders: list[Shader], suffix: str = "spv",
-		glslang: str | None = None, dxc: str | None = None, cwd: Path | None = None) -> None:
-	"""Compile shaders to SPIR-V using glslang for GLSL shaders and DXC for HLSL shaders
+@dataclass
+class Configure:
+	macros: dict[str, str]
+	meta: dict[str, List[Shader]]
+	rules: List[Rule]
 
-	If a GLSL version exists it will be built with glslang,
-	else building HLSL with DXC will be attempted.
 
-	:param shaders: The list of shader source paths to compile
-	:param glslang: Optional path to glslang executable, if `None` defaults to "glslang"
-	:param dxc:     Optional path to dxc excutable, if `None` defaults to "dxc"
-	:param cwd:     Optionally set the current working directory for the compiler
-	"""
-	for glsl, hlsl in zip(
-			shaders_suffixes(shaders, "glsl", suffix),
-			shaders_suffixes(shaders, "hlsl", suffix)):
-		if cwd.joinpath(glsl.source).exists():
-			flags = ["--quiet"]
-			compile_glsl_spirv_shader(shader_prepend_ext(glsl, "vtx"), "vert",
-				flags=[*flags, "-DVERTEX", *shader_definitions(glsl)], glslang=glslang, cwd=cwd)
-			compile_glsl_spirv_shader(shader_prepend_ext(glsl, "frg"), "frag",
-				flags=flags, glslang=glslang, cwd=cwd)
+class Dependency(NamedTuple):
+	source: str
+	target: str
+	recipe: List[str]
+	definitions: str | None
+
+
+class Writer(ABC):
+	@classmethod
+	def __init__(self, file: TextIO, configure: Configure, /):
+		self.out = file
+		self.configure = configure
+
+	@abstractmethod
+	def generate(self):
+		pass
+
+	@staticmethod
+	def pattern_string(name: str, pat: Pattern, /) -> str:
+		if pat.folder is not None:
+			return f"{str(pat.folder).rstrip('/') or ''}/{name}{pat.suffix}"
 		else:
-			compile_hlsl_spirv_shader(shader_prepend_ext(hlsl, "vtx"), "vert",
-				flags=["-DVULKAN", "-DVERTEX", *shader_definitions(hlsl)], dxc=dxc, cwd=cwd)
-			compile_hlsl_spirv_shader(shader_prepend_ext(hlsl, "frg"), "frag",
-				flags=["-DVULKAN", *shader_definitions(hlsl)], dxc=dxc, cwd=cwd)
+			return f"{name}{pat.suffix}"
+
+	@staticmethod
+	def match_pattern(p: Path, pat: Pattern, /) -> bool:
+		if not "".join(p.suffixes).endswith(pat.suffix):
+			return False
+		if pat.folder is None:
+			if len(p.parts) > 1:
+				return False
+		elif not p.is_relative_to(pat.folder):
+			return False
+		return True
+
+	def unroll_dependencies(self) -> Iterable[Tuple[str, List[Dependency]]]:
+		def unroll_targets(self, targets: List[Shader], /) -> Iterable[Dependency]:
+			for target in targets:
+				if rule := next((rule for rule in self.configure.rules
+						if self.match_pattern(target.output, rule.target)
+						and self.match_pattern(target.source, rule.prerequisite)), None):
+					yield Dependency(str(target.source), str(target.output), rule.recipe, target.definition_flags())
+				else:
+					rule = next(rule for rule in self.configure.rules if self.match_pattern(target.output, rule.target))
+					name = target.output.stem
+					output = str(target.output)
+					while not self.match_pattern(target.source, rule.prerequisite):
+						source = str(Path(rule.prerequisite.folder, name).with_suffix(rule.prerequisite.suffix))
+						yield Dependency(source, output, rule.recipe, None)
+						rule = next(next_rule for next_rule in self.configure.rules
+							if rule.prerequisite == next_rule.target)
+						output = source
+					yield Dependency(str(target.source), output, rule.recipe, target.definition_flags())
+
+		for group, targets in self.configure.meta.items():
+			yield group, list(unroll_targets(self, targets))
 
 
-def compile_glsl_spirv_shader(shader: Shader, type: str, flags: list[str] = None,
-		glslang: str | None = None, cwd: Path | None = None) -> None:
-	"""Compile GLSL shaders to SPIR-V using glslang
+class MakefileWriter(Writer):
+	@classmethod
+	def write_specials(self):
+		pass
 
-	:param shader:  The shaders to compile
-	:param type:    Type of shader to compile
-	:param flags:   List of additional flags to pass to glslang
-	:param glslang: Optional path to glslang executable, if `None` defaults to "glslang"
-	:param cwd:     Optionally set the current working directory for the compiler
-	"""
-	if glslang is None:
-		glslang = "glslang"
-	if flags is None:
-		flags = []
-	flags += ["-V", "-S", type, "-o", shader.output, shader.source]
-	subprocess.run([glslang, *flags], cwd=cwd, check=True)
+	@abstractmethod
+	def write_rules(self, macro_map: dict[str, str], /):
+		pass
 
+	def write_dependency(self, dependency: Dependency, macro_map: dict[str, str], explicit: bool, /):
+		def write_rule(predicate: str, target: str, recipe: List[str], macro_map: dict[str, str], /):
+			print(f"{target}: {predicate}", file=self.out)
+			for line in recipe:
+				print("\t" + Template(line).substitute(macro_map), file=self.out)
+			print(file=self.out)
+		write_rule(dependency.source, dependency.target, dependency.recipe, {
+			"source": dependency.source if explicit else "$<",
+			"target": dependency.target if explicit else "$@",
+			"definitions": "" if dependency.definitions is None else dependency.definitions,
+			**macro_map})
 
-def compile_hlsl_spirv_shader(shader: Shader, type: str, flags: list[str] = None,
-		dxc: str | None = None, cwd: Path | None = None) -> None:
-	"""Compile HLSL shaders to SPIR-V using DXC
+	def generate(self):
+		macro_map = {}
+		if len(self.configure.macros):
+			left_pad = max(len(x) for x in self.configure.macros.keys())
+			for name, value in self.configure.macros.items():
+				name_upper = name.upper()
+				macro_map.update({f"macro_{name}": f"$({name_upper})"})
+				print(f"{name_upper:<{left_pad}} := {value}", file=self.out)
+			print(file=self.out)
 
-	:param shader: The shaders to compile
-	:param type:   Type of shader to compile
-	:param flags:   List of additional flags to pass to DXC
-	:param dxc:    Optional path to dxc excutable, if `None` defaults to "dxc"
-	:param cwd:    Optionally set the current working directory for the compiler
-	"""
-	if dxc is None:
-		dxc = "dxc"
-	if flags is None:
-		flags = []
-	entry, shader_type = {
-		"vert": ("VertexMain", "vs_6_0"),
-		"frag": ("FragmentMain", "ps_6_0") }[type]
-	cflags = ["-spirv", *flags, "-E", entry, "-T", shader_type]
-	subprocess.run([dxc, *cflags, "-Fo", shader.output, shader.source], cwd=cwd, check=True)
+		self.write_specials()
+		meta_targets = self.configure.meta.keys()
+		print(f"all:", *meta_targets, file=self.out)
+		print(".PHONY:", "all", *meta_targets, "clean", file=self.out)
 
+		for target, prerequisites in self.configure.meta.items():
+			print(f"{target}:", *(i.output for i in prerequisites), file=self.out)
+		print(file=self.out)
 
-def compile_d3d12_shaders(shaders: list[Shader], build_dxbc: bool = False,
-		dxc: str | None = None, cwd: Path | None = None) -> None:
-	for shader in shaders_suffixes(shaders, "hlsl", "dxb"):
-		compile_dxil_shader(shader_prepend_ext(shader, "vtx"), "vert",
-			flags=["-DD3D12", "-DVERTEX", *shader_definitions(shader)], dxc=dxc, cwd=cwd)
-		compile_dxil_shader(shader_prepend_ext(shader, "pxl"), "frag",
-			flags=["-DD3D12", *shader_definitions(shader)], dxc=dxc, cwd=cwd)
-	if build_dxbc:  # FXC is only available thru the Windows SDK
-		for shader in shaders_suffixes(shaders, "hlsl", "fxb"):
-			compile_dxbc_shader(shader_prepend_ext(shader, "vtx"), "vert",
-				flags=["/DD3D12", "/DVERTEX", *shader_definitions(shader, "/D")], cwd=cwd)
-			compile_dxbc_shader(shader_prepend_ext(shader, "pxl"), "frag",
-				flags=["/DD3D12", *shader_definitions(shader, "/D")], cwd=cwd)
+		self.dependencies = dict(self.unroll_dependencies())
+		self.write_rules(macro_map)
+
+		print("clean:", file=self.out)
+		for group in self.dependencies.values():
+			print(f"\trm -f", *(x[1] for x in group), file=self.out)
 
 
-def compile_dxil_shader(shader: Shader, type: str, flags: list[str] | None = None,
-		dxc: str | None = None, cwd: Path | None = None) -> None:
-	"""Compile an HLSL shaders to DXIL using DXC
+class PosixMakefileWriter(MakefileWriter):
+	def write_specials(self):
+		print(".POSIX:", file=self.out)
+		print(".SUFFIXES:", file=self.out)
 
-	:param shader: Path to the shader source to compile
-	:param type:   Type of shader to compile
-	:param flags:  Optional list of flags to pass to DXC
-	:param dxc:    Optional path to dxc excutable, if `None` defaults to "dxc"
-	:param cwd:    Optionally set the current working directory for the compiler
-	"""
-	if flags is None:
-		flags = []
-	if dxc is None:
-		dxc = "dxc"
-	entry, shader_type = {
-		"vert": ("VertexMain", "vs_6_0"),
-		"frag": ("PixelMain", "ps_6_0") }[type]
-	cflags = [*flags, "-E", entry, "-T", shader_type]
-	subprocess.run([dxc, *cflags, "-Fo", shader.output, shader.source], cwd=cwd, check=True)
+	def write_rules(self, macro_map: dict[str, str], /):
+		for group in self.dependencies.values():
+			for dependency in group:
+				self.write_dependency(dependency, macro_map, True)
 
 
-def compile_dxbc_shader(shader: Shader, type: str, flags: list[str] | None = None,
-		cwd: Path | None = None) -> None:
-	"""Compile an HLSL shader to DXBC using FXC
-
-	:param shader: Path to the shader source to compile
-	:param type:   Type of shader to compile
-	:param flags:  Optional list of flags to pass to FXC
-	:param cwd:    Optionally set the current working directory for the compiler
-	"""
-	if flags is None:
-		flags = []
-	entry, shader_type = {
-		"vert": ("VertexMain", "vs_5_1"),
-		"frag": ("PixelMain", "ps_5_1") }[type]
-	cflags = [*flags, "/E", entry, "/T", shader_type]
-	subprocess.run(["fxc", *cflags, "/Fo", shader.output, shader.source], cwd=cwd, check=True)
+class GnuMakefileWriter(MakefileWriter):
+	def write_rules(self, macro_map: dict[str, str], /):
+		for group in self.dependencies.values():
+			for dependency in group:
+				if dependency.definitions:
+					self.write_dependency(dependency, macro_map, False)
+		for rule in self.configure.rules:
+			self.write_dependency(Dependency(
+					self.pattern_string("%", rule.prerequisite),
+					self.pattern_string("%", rule.target),
+					rule.recipe, ""),
+				macro_map, False)
 
 
-def compile_shaders() -> None:
-	build_spirv = True
-	build_metal = True
-	build_dxil = True
-	build_dxbc = False
+class Environment(NamedTuple):
+	writer: Type[Writer]
+	make_name: str
+	src_dir: Path
+	dest_dir: Path
+	is_darwin: bool
+	is_windows: bool
+	metal_debug: bool
+
+
+Groups = namedtuple("Groups", ["metal", "glsl", "hlsl"])
+
+
+def find_shaders(root: Path, e: Environment, /) -> Groups:
+	from configparser import ConfigParser
+	config = ConfigParser()
+	config.read(root / e.src_dir / "shaders.ini")
+
+	metal_shaders: set[Shader] = set()
+	glsl_shaders: set[Shader] = set()
+	hlsl_shaders: set[Shader] = set()
+
+	for line in config.items("Shaders"):
+		tokens = line[1].split()
+
+		source = tokens[0]
+		output = line[0]
+		definitions = tokens[1:]
+		definitions = frozenset(definitions) if len(definitions) else None
+
+		source_path = e.src_dir / source
+		output_path = e.dest_dir / output
+		msl_source = root.joinpath(source_path).with_name(f"{source}.metal")
+		glsl_source = root.joinpath(source_path).with_name(f"{source}.glsl")
+		hlsl_source = root.joinpath(source_path).with_name(f"{source}.hlsl")
+		msl_exists = msl_source.is_file()
+		glsl_exists = glsl_source.is_file()
+		hlsl_exists = hlsl_source.is_file()
+
+		if not msl_exists and not glsl_exists and not hlsl_exists:
+			sys.exit(f"FATAL: \"{source}\" specified in shaders.ini but no corresponding metal, glsl, or hlsl exists")
+
+		if msl_exists:
+			if not glsl_exists and not hlsl_exists:
+				print(f"WARN: \"{msl_source.name}\" exists but no \"{glsl_source.name}\" or \"{hlsl_source.name}\"")
+		elif glsl_exists:
+			print(f"WARN: \"{glsl_source.name}\" exists but no \"{msl_source.name}\"")
+		elif hlsl_exists:
+			print(f"WARN: \"{hlsl_source.name}\" exists but no \"{msl_source.name}\"")
+		if glsl_exists and not hlsl_exists:
+			print(f"WARN: \"{glsl_source.name}\" exists but no \"{hlsl_source.name}\"")
+
+		if e.is_darwin and msl_exists:
+			metal_shaders.add(Shader(source_path, output_path, definitions))
+		if glsl_exists:
+			glsl_shaders.add(Shader(source_path, output_path, definitions))
+		if hlsl_exists:
+			hlsl_shaders.add(Shader(source_path, output_path, definitions))
+
+	return Groups(metal_shaders, glsl_shaders, hlsl_shaders)
+
+
+def compile_recipe(shader_groups: Groups, e: Environment) -> Configure:
+	hlsl_spirv = shader_groups.hlsl - shader_groups.glsl
+	use_glslang = bool(shader_groups.glsl)
+	use_dxc_spirv = bool(hlsl_spirv)
+	use_metal = e.is_darwin and bool(shader_groups.metal)
+	use_dxc = bool(shader_groups.hlsl)
+	use_fxb = e.is_windows and use_dxc
+
+	configure = Configure({}, defaultdict(list), [])
+
+	# Make rules for SPIR-V shaders for Vulkan
+	if use_glslang:
+		configure.macros.update({
+			"glslang": "glslang",
+		})
+		configure.meta["vulkan"] += \
+			list(shaders_suffixes(shader_groups.glsl, "glsl", ["vtx.spv", "frg.spv"]))
+		configure.rules += [
+			Rule(
+				Pattern(e.src_dir, ".glsl"),
+				Pattern(e.dest_dir, ".vtx.spv"),
+				["$macro_glslang --quiet -V -S vert -DVERTEX -o $target $source"]),
+			Rule(
+				Pattern(e.src_dir, ".glsl"),
+				Pattern(e.dest_dir, ".frg.spv"),
+				["$macro_glslang --quiet -V -S frag -o $target $source"]),
+		]
+
+	if use_dxc or use_dxc_spirv:
+		configure.macros.update({
+			"dxc": "dxc",
+		})
+
+	if use_dxc_spirv:
+		configure.meta["vulkan"] += \
+			list(shaders_suffixes(hlsl_spirv, "hlsl", ["vtx.spv", "frg.spv"]))
+		configure.rules += [
+			Rule(
+				Pattern(e.src_dir, ".hlsl"),
+				Pattern(e.dest_dir, ".vtx.spv"),
+				["$macro_dxc -spirv -E VertexMain -T vs_6_0 -DVULKAN -DVERTEX $definitions -Fo $target $source"]),
+			Rule(
+				Pattern(e.src_dir, ".hlsl"),
+				Pattern(e.dest_dir, ".frg.spv"),
+				["$macro_dxc -spirv -E FragmentMain -T ps_6_0 -DVULKAN $definitions -Fo $target $source"]),
+		]
+
+	# Make rules for Metal shaders on macOS
+	if use_metal:
+		configure.macros.update({
+			"metal_platform": "macos",
+			"metal_sdk": "macosx",
+			"metal_version_min": "10.11",
+			"metalc": "$(shell xcrun -sdk $(METAL_SDK) -f metal)"
+		})
+		if e.metal_debug:
+			configure.macros.update({"metal_dsymutil": "$(shell xcrun -sdk $(METAL_SDK) -f metal-dsymutil)"})
+		else:
+			configure.macros.update({"metalld": "$(shell xcrun -sdk $(METAL_SDK) -f metallib)"})
+		configure.macros.update({
+			"metalflags": " ".join([
+				"-Wall",
+				"-O3",
+				"-std=$(METAL_PLATFORM)-metal1.1",
+				"-m$(METAL_SDK)-version-min=$(METAL_VERSION_MIN)",
+				"-frecord-sources"
+			])
+		})
+		configure.meta["metal"] += \
+			list(shaders_suffixes(shader_groups.metal, "metal", "metallib"))
+		configure.rules += [
+			Rule(
+				Pattern(e.src_dir, ".metal"),
+				Pattern(e.dest_dir, ".air"),
+				["$macro_metalc $macro_metalflags $definitions -c -o $target $source"]),
+			Rule(
+				Pattern(e.dest_dir, ".air"),
+				Pattern(e.dest_dir, ".metallib"), [
+					"$macro_metalc -frecord-sources -o $target $source",
+					"$macro_metal_dsymutil -flat -remove-source $target"
+				]) if e.metal_debug else
+			Rule(
+				Pattern(e.dest_dir, ".air"),
+				Pattern(e.dest_dir, ".metallib"),
+				["$macro_metalld -o $target $source"]),
+		]
+
+	# Make rules for HLSL shaders on Windows
+	if use_dxc:
+		configure.meta["d3d12"] += \
+			list(shaders_suffixes(shader_groups.hlsl, "hlsl", ["vtx.dxb", "pxl.dxb"]))
+		configure.rules += [
+			Rule(
+				Pattern(e.src_dir, ".hlsl"),
+				Pattern(e.dest_dir, ".vtx.dxb"),
+				["$macro_dxc -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX $definitions -Fo $target $source"]),
+			Rule(
+				Pattern(e.src_dir, ".hlsl"),
+				Pattern(e.dest_dir, ".pxl.dxb"),
+				["$macro_dxc -E PixelMain -T ps_6_0 -DD3D12 $definitions -Fo $target $source"]),
+		]
+
+	# FXC is only available through the Windows SDK
+	if use_fxb:
+		configure.macros.update({
+			"fxc": "fxc",
+		})
+		configure.meta["d3d12"] += \
+			list(shaders_suffixes(shader_groups.hlsl, "hlsl", ["vtx.fxb", "pxl.fxb"]))
+		configure.rules += [
+			Rule(
+				Pattern(e.src_dir, ".hlsl"),
+				Pattern(e.dest_dir, ".vtx.fxb"),
+				["$macro_fxc /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX $definitions /Fo $target $source"]),
+			Rule(
+				Pattern(e.src_dir, ".hlsl"),
+				Pattern(e.dest_dir, ".pxl.fxb"),
+				["$macro_fxc /E PixelMain /T ps_5_1 /DD3D12 $definitions /Fo $target $source"]),
+		]
+
+	return configure
+
+
+def build_makefiles(basedir: Path, /):
+	root = basedir.parent
 	src_dir = Path("src/shaders")
 	dest_dir = Path("data/shaders")
 
-	system = platform.system()
+	ini_stat = os.stat(root / src_dir / "shaders.ini")
 
-	spirv_src = set()
-	metal_src = set()
-	hlsl_src = set()
+	def generate_makefile(writer: Type[Writer], name: str, is_darwin: bool, is_windows: bool, /):
+		makefile_stat = os.stat(basedir / "shaders" / name)
+		if makefile_stat.st_mtime >= ini_stat.st_mtime:
+			return
 
-	root = Path(sys.argv[0]).resolve().parent.parent
-	root.joinpath(dest_dir).mkdir(parents=True, exist_ok=True)
+		e = Environment(writer, name, src_dir, dest_dir, is_darwin, is_windows, False)
+		with basedir.joinpath("shaders", e.make_name).open("w") as out:
+			e.writer(out, compile_recipe(find_shaders(root, e), e)).generate()
 
-	if build_metal:
-		metal_src = set(p.stem for p in root.joinpath(src_dir).glob("*.metal"))
-	if build_spirv or build_dxil or build_dxbc:
-		hlsl_src = set(p.stem for p in root.joinpath(src_dir).glob("*.hlsl"))
-	if build_spirv:
-		spirv_src = set(p.stem for p in root.joinpath(src_dir).glob("*.glsl")) | hlsl_src
-		for src in metal_src - spirv_src:
-			print(f"WARN: \"{src}.metal\" exists but no \"{src}.glsl\" or \"{src}.hlsl\"")
-		if build_dxil or build_dxbc:
-			for src in spirv_src - hlsl_src:
-				print(f"WARN: \"{src}.glsl\" exists but no \"{src}.hlsl\"")
+	generate_makefile(GnuMakefileWriter, "Makefile.darwin", True, False)
+	generate_makefile(PosixMakefileWriter, "Makefile.unix", False, False)
 
-	def source_shaders(sources: Iterable[str | Path]) -> Iterable[Shader]:
-		for src in sources:
-			if src == "lesson16":
-				for l in [("unlit", []), ("lit", ["LIGHTING"])]:
-					for f in [("exp", ["FOG_EXP"]), ("exp2", ["FOG_EXP2"]), ("lin", ["FOG_LINEAR"])]:
-						yield Shader(src_dir / src, dest_dir / f"{src}_{l[0]}_{f[0]}", l[1] + f[1])
-			else:
-				yield Shader(src_dir / src, dest_dir / src, None)
+
+def run_makefile(basedir: Path, /):
+	import shutil
+	import subprocess
+	import os
+	import platform
+
+	root = basedir.parent
 
 	# Try to find cross-platform shader compilers
-	glslang = shutil.which("glslang")
-	dxc = shutil.which("dxc", path=f"/opt/dxc/bin:{os.environ.get('PATH', os.defpath)}")
-
-	# Build SPIR-V shaders for Vulkan
-	if build_spirv:
-		compile_spirv_shaders(list(source_shaders(spirv_src)), glslang=glslang, dxc=dxc, cwd=root)
-
-	# Build Metal shaders on macOS
-	if build_metal and system == "Darwin":
-		compile_platform = "macos"
+	defs = {
+		"glslang": shutil.which("glslang"),
+		"dxc": shutil.which("dxc", path=f"/opt/dxc/bin:{os.environ.get('PATH', os.defpath)}"),
+	}
+	if (system := platform.system()) == "Darwin":
 		sdk_platform = "macosx"
-		min_version = "10.11"
-		for shader in shaders_suffixes(source_shaders(metal_src), "metal", "metallib"):
-			compile_metal_shaders(
-				sources=[shader.source],
-				library=shader.output,
-				cflags=["-Wall", "-O3",
-					f"-std={compile_platform}-metal1.1",
-					f"-m{sdk_platform}-version-min={min_version}",
-					*shader_definitions(shader)],
-				sdk=sdk_platform,
-				cwd=root)
+		def xcrun_find_program(name: str):
+			return subprocess.run(["xcrun", "-sdk", sdk_platform, "-f", name],
+				capture_output=True, check=True).stdout.decode("utf-8").strip()
+		defs.update({
+			"metalc": xcrun_find_program("metal"),
+			"metalld": xcrun_find_program("metallib"),
+			"metal_platform": "macos",
+			"metal_sdk": sdk_platform,
+			"metal_version_min": "10.11"
+		})
+		makefile = "Makefile.darwin"
+	elif system == "Windows":
+		pass
+	else:
+		makefile = "Makefile.unix"
 
-	# Build HLSL shaders on Windows or when DXC is available
-	is_windows = system == "Windows"
-	if (build_dxil or (is_windows and build_dxbc)) and (is_windows or dxc is not None):
-		compile_d3d12_shaders(list(source_shaders(hlsl_src)), build_dxbc=build_dxbc and is_windows, dxc=dxc, cwd=root)
+	make_path = basedir.joinpath("shaders", makefile).relative_to(root)
+	make_cmd = ["make", "-f", str(make_path), *(f"{k.upper()}={v}" for k, v in defs.items())]
+	subprocess.run(make_cmd, cwd=root, check=True)
+
+
+def main():
+	basedir = Path(sys.argv[0]).resolve().parent
+	build_makefiles(basedir)
+	run_makefile(basedir)
 
 
 if __name__ == "__main__":
-	compile_shaders()
+	main()
