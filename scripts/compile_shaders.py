@@ -102,7 +102,7 @@ class Writer(ABC):
 	@staticmethod
 	def pattern_string(name: str, pat: Pattern, /) -> str:
 		if pat.folder is not None:
-			return f"{str(pat.folder).rstrip('/') or ''}/{name}{pat.suffix}"
+			return f"{str(pat.folder.as_posix()).rstrip('/') or ''}/{name}{pat.suffix}"
 		else:
 			return f"{name}{pat.suffix}"
 
@@ -123,18 +123,18 @@ class Writer(ABC):
 				if rule := next((rule for rule in self.configure.rules
 						if self.match_pattern(target.output, rule.target)
 						and self.match_pattern(target.source, rule.prerequisite)), None):
-					yield Dependency(str(target.source), str(target.output), rule.recipe, target.definition_flags())
+					yield Dependency(str(target.source.as_posix()), str(target.output.as_posix()), rule.recipe, target.definition_flags())
 				else:
 					rule = next(rule for rule in self.configure.rules if self.match_pattern(target.output, rule.target))
 					name = target.output.stem
-					output = str(target.output)
+					output = str(target.output.as_posix())
 					while not self.match_pattern(target.source, rule.prerequisite):
-						source = str(Path(rule.prerequisite.folder, name).with_suffix(rule.prerequisite.suffix))
+						source = str(Path(rule.prerequisite.folder, name).with_suffix(rule.prerequisite.suffix).as_posix())
 						yield Dependency(source, output, rule.recipe, None)
 						rule = next(next_rule for next_rule in self.configure.rules
 							if rule.prerequisite == next_rule.target)
 						output = source
-					yield Dependency(str(target.source), output, rule.recipe, target.definition_flags())
+					yield Dependency(str(target.source.as_posix()), output, rule.recipe, target.definition_flags())
 
 		for group, targets in self.configure.meta.items():
 			yield group, list(unroll_targets(self, targets))
@@ -177,7 +177,7 @@ class MakefileWriter(Writer):
 		print(".PHONY:", "all", *meta_targets, "clean", file=self.out)
 
 		for target, prerequisites in self.configure.meta.items():
-			print(f"{target}:", *(i.output for i in prerequisites), file=self.out)
+			print(f"{target}:", *(str(i.output.as_posix()) for i in prerequisites), file=self.out)
 		print(file=self.out)
 
 		self.dependencies = dict(self.unroll_dependencies())
@@ -250,7 +250,7 @@ class NinjaWriter(Writer):
 		meta_targets = self.configure.meta.keys()
 		print("build all: phony", *meta_targets, file=self.out)
 		for target, prerequisites in self.configure.meta.items():
-			print(f"build {target}: phony", *(i.output for i in prerequisites), file=self.out)
+			print(f"build {target}: phony", *(str(i.output.as_posix()) for i in prerequisites), file=self.out)
 		print(file=self.out)
 
 		print("default all", file=self.out)
@@ -478,11 +478,26 @@ def run_makefile(basedir: Path, /):
 	import platform
 
 	root = basedir.parent
+	system = platform.system()
 
+	def find_tool(tools: List[str], paths: List[str]):
+		new_path = (";" if system == "Windows" else ":").join((*paths, os.environ.get("PATH", os.defpath)))
+		for tool in tools:
+			if r := shutil.which(tool, path=new_path):
+				return r
+		return None
+
+	# Find build tools
+	if system == "Windows":
+		make = find_tool(["make", "mingw32-make"], [r"C:\msys64\usr\bin", r"C:\msys64\mingw64\bin"])
+	else:
+		make = "make"
 	ninja = shutil.which("ninja")
+	nmake = shutil.which("nmake")
+
 	# Try to find cross-platform shader compilers
 	glslang = shutil.which("glslang")
-	dxc = shutil.which("dxc", path=f"/opt/dxc/bin:{os.environ.get('PATH', os.defpath)}")
+	dxc = find_tool(["dxc"], ["/opt/dxc/bin", r"X:\Git\DirectXShaderCompiler\out\build\x64-Release\bin"])
 
 	def get_makefile_defs() -> dict[str, str]:
 		defs = {}
@@ -499,11 +514,11 @@ def run_makefile(basedir: Path, /):
 		if dxc:
 			path.append(str(Path(dxc).parent))
 		path.append(os.environ.get('PATH', os.defpath))
-		return ":".join(path)
+		return (";" if system == "Windows" else ":").join(path)
 
 	def run_make(makefile: str, defs: dict[str, str]):
 		make_path = basedir.joinpath("shaders", makefile).relative_to(root)
-		make_cmd = ["make", "-f", str(make_path), *(f"{k.upper()}={v}" for k, v in defs.items())]
+		make_cmd = [make, "-f", str(make_path), *(f"{k.upper()}={v}" for k, v in defs.items())]
 		subprocess.run(make_cmd, cwd=root, check=True)
 
 	def run_ninja(buildfile: str, path: str):
@@ -512,7 +527,7 @@ def run_makefile(basedir: Path, /):
 		build_path = basedir.joinpath("shaders", buildfile).relative_to(root)
 		subprocess.run([ninja, "-f", build_path], env=env, cwd=root, check=True)
 
-	if (system := platform.system()) == "Darwin":
+	if system == "Darwin":
 		sdk_platform = "macosx"
 		def xcrun_find_program(name: str):
 			return subprocess.run(["xcrun", "-sdk", sdk_platform, "-f", name],
@@ -525,7 +540,7 @@ def run_makefile(basedir: Path, /):
 			"metal_sdk": sdk_platform,
 			"metal_version_min": "10.11"
 		})
-	elif system == "Windows":
+	elif system == "Windows" and nmake:
 		pass
 	elif ninja:
 		run_ninja("build.ninja", tools_path())
