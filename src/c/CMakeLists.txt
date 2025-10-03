@@ -20,3 +20,4 @@ add_lesson(lesson16 SOURCES lesson16.c SHADERS
 add_lesson(lesson17 SOURCES lesson17.c SHADERS lesson6 lesson17 DATA Font.bmp Bumps.bmp)
 add_lesson(lesson18 SOURCES lesson18.c quadric.h quadric.c SHADERS lesson6 lesson7 DATA Wall.bmp)
 add_lesson(lesson20 SOURCES lesson20.c SHADERS lesson20 DATA Logo.bmp Image1.bmp Image2.bmp Mask1.bmp Mask2.bmp)
+add_lesson(lesson29 SOURCES lesson29.c SHADERS lesson6 DATA Monitor.raw GL.raw)

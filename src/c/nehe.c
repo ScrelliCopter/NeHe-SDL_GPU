@@ -277,6 +277,7 @@ SDL_GPUTexture* NeHe_LoadTextureSeparateMask(NeHeContext* restrict ctx,
 SDL_GPUTexture* NeHe_CreateGPUTextureFromPixels(NeHeContext* restrict ctx, const void* restrict data,
 	size_t dataSize, const SDL_GPUTextureCreateInfo* const restrict createInfo, bool genMipmaps)
 {
+	SDL_assert(data && dataSize);
 	SDL_assert(dataSize <= UINT32_MAX);
 	SDL_GPUDevice* device = ctx->device;
 
