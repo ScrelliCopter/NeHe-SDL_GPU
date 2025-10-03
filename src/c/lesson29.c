@@ -66,8 +66,8 @@ static bool ImageBlit(
 		return false;
 	}
 
-	const uint8_t* srcP = &((uint8_t*)src->pixels)[srcRect.y * src->w * bytesPerPixel];
-	uint8_t* dstP = &((uint8_t*)dst->pixels)[dstOff.y * dst->w * bytesPerPixel];
+	const uint8_t* srcP = &((uint8_t*)src->pixels)[srcRect.y * src->pitch];
+	uint8_t* dstP = &((uint8_t*)dst->pixels)[dstOff.y * dst->pitch];
 
 	for (int row = 0; row < srcRect.h; ++row)
 	{
@@ -87,7 +87,7 @@ static bool ImageBlit(
 			}
 		}
 		srcP += bytesPerPixel * (src->w - (srcRect.w + srcRect.x));
-		dstP += bytesPerPixel * (dst->w - (srcRect.w + dstOff.y));
+		dstP += bytesPerPixel * (dst->w - (srcRect.w + dstOff.x));
 	}
 
 	SDL_UnlockSurface(dst);
