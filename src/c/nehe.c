@@ -111,6 +111,8 @@ char* NeHe_ResourcePath(const NeHeContext* restrict ctx, const char* const restr
 	char* path = SDL_malloc(baseLen + resourcePathLen + 1);
 	if (!path)
 	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+			"NeHe_ResourcePath: Failed to allocate path: SDL_malloc returned NULL");
 		return NULL;
 	}
 	SDL_memcpy(path, ctx->baseDir, baseLen);

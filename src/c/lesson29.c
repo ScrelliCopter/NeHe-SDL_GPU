@@ -6,33 +6,11 @@
 #include "nehe.h"
 
 
-typedef struct
-{
-	int width, height;
-	int bytesPerPixel;
-	uint8_t pixels[];
-} Image;
-
-static Image* ImageNew(int width, int height, int bytesPerPixel)
-{
-	const size_t pixelsSize = (size_t)bytesPerPixel * (size_t)width * (size_t)height;
-	Image* img = (Image*)SDL_malloc(sizeof(Image) + pixelsSize);
-	if (!img)
-	{
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "ImageNew: Image allocation failed: SDL_malloc returned NULL");
-		return NULL;
-	}
-	img->width         = width;
-	img->height        = height;
-	img->bytesPerPixel = bytesPerPixel;
-	SDL_memset(img->pixels, 0, pixelsSize);
-	return img;
-}
-
-static bool ImageReadRAW(const NeHeContext* restrict ctx, Image* restrict img, const char* const restrict resource)
+static bool ImageReadRAW(const NeHeContext* restrict ctx, SDL_Surface* restrict img,
+	const char* const restrict resourcePath)
 {
 	// Open raw texture file
-	char* path = NeHe_ResourcePath(ctx, resource);
+	char* path = NeHe_ResourcePath(ctx, resourcePath);
 	if (!path)
 		return false;
 	SDL_IOStream* f = SDL_IOFromFile(path, "rb");
@@ -43,13 +21,20 @@ static bool ImageReadRAW(const NeHeContext* restrict ctx, Image* restrict img, c
 		return false;
 	}
 
-	// Read image data from file from bottom to top, padding with an alpha (255) byte
-	const size_t bytesPerPixel = (size_t)img->bytesPerPixel;
-	const size_t stride = bytesPerPixel * (size_t)img->width;
-	for (int row = img->height - 1; row >= 0; --row)
+	// Lock surface for writing
+	if (!SDL_LockSurface(img))
 	{
-		uint8_t* rowP = &img->pixels[stride * (size_t)row];
-		for (int col = 0; col < img->width; ++col)
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_LockSurface: %s", SDL_GetError());
+		SDL_CloseIO(f);
+		return false;
+	}
+
+	// Read image data from file from bottom to top, padding with an alpha (255) byte
+	const size_t bytesPerPixel = (size_t)SDL_BYTESPERPIXEL(img->format);
+	for (int row = img->h - 1; row >= 0; --row)
+	{
+		uint8_t* rowP = &((uint8_t*)img->pixels)[img->pitch * row];
+		for (int col = 0; col < img->w; ++col)
 		{
 			SDL_ReadIO(f, rowP, bytesPerPixel - 1);
 			rowP[bytesPerPixel - 1] = 0xFF;
@@ -57,22 +42,32 @@ static bool ImageReadRAW(const NeHeContext* restrict ctx, Image* restrict img, c
 		}
 	}
 
+	SDL_UnlockSurface(img);
 	SDL_CloseIO(f);
 	return true;
 }
 
-static void ImageBlit(
-	Image* restrict src, const SDL_Rect srcRect,
-	Image* restrict dst, const SDL_Point dstOff,
+static bool ImageBlit(
+	SDL_Surface* restrict src, const SDL_Rect srcRect,
+	SDL_Surface* restrict dst, const SDL_Point dstOff,
 	bool blend, int alpha)
 {
-	SDL_assert(src->bytesPerPixel == dst->bytesPerPixel);
-	const int bytesPerPixel = src->bytesPerPixel;
+	SDL_assert(src->format == dst->format);
+	const int bytesPerPixel = SDL_BYTESPERPIXEL(src->format);
 
 	alpha = SDL_clamp(alpha, 0, 0xFF);
 
-	uint8_t* srcP = &src->pixels[srcRect.y * src->width * bytesPerPixel];
-	uint8_t* dstP = &dst->pixels[dstOff.y * dst->width * bytesPerPixel];
+	// Lock surfaces for read/write
+	if (!SDL_LockSurface(src) || !SDL_LockSurface(dst))
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_LockSurface: %s", SDL_GetError());
+		SDL_UnlockSurface(dst);
+		SDL_UnlockSurface(src);
+		return false;
+	}
+
+	const uint8_t* srcP = &((uint8_t*)src->pixels)[srcRect.y * src->w * bytesPerPixel];
+	uint8_t* dstP = &((uint8_t*)dst->pixels)[dstOff.y * dst->w * bytesPerPixel];
 
 	for (int row = 0; row < srcRect.h; ++row)
 	{
@@ -88,43 +83,46 @@ static void ImageBlit(
 					(*dstP) = (*srcP);
 			}
 		}
-		srcP += bytesPerPixel * (src->width - (srcRect.w + srcRect.x));
-		dstP += bytesPerPixel * (dst->width - (srcRect.w + dstOff.y));
+		srcP += bytesPerPixel * (src->w - (srcRect.w + srcRect.x));
+		dstP += bytesPerPixel * (dst->w - (srcRect.w + dstOff.y));
 	}
+
+	SDL_UnlockSurface(dst);
+	SDL_UnlockSurface(src);
+	return true;
 }
 
-static SDL_GPUTexture* LoadTexture(NeHeContext* restrict ctx)
+static SDL_GPUTexture* BuildTexture(NeHeContext* restrict ctx)
 {
-	// Load images
-	Image* imageBg = NULL, * overlay = NULL;
-	if ((imageBg = ImageNew(256, 256, 4)) == NULL ||
-		(overlay = ImageNew(256, 256, 4)) == NULL ||
+	// Load raw image data into surfaces
+	SDL_Surface* imageBg = NULL, * overlay = NULL;
+	if ((imageBg = SDL_CreateSurface(256, 256, SDL_PIXELFORMAT_ABGR8888)) == NULL ||
+		(overlay = SDL_CreateSurface(256, 256, SDL_PIXELFORMAT_ABGR8888)) == NULL ||
 		!ImageReadRAW(ctx, imageBg, "Data/Monitor.raw") ||
 		!ImageReadRAW(ctx, overlay, "Data/GL.raw"))
 	{
-		SDL_free(overlay);
-		SDL_free(imageBg);
+		if (!imageBg || !overlay)
+			SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateSurface: %s", SDL_GetError());
+		SDL_DestroySurface(overlay);
+		SDL_DestroySurface(imageBg);
 		return NULL;
 	}
 
 	// Composite overlay onto monitor image
-	ImageBlit(
+	const bool blitSuccess = ImageBlit(
 		overlay, (SDL_Rect){ 127, 127, 128, 128 },
 		imageBg, (SDL_Point){ 64, 64 },
 		true, 127);
-	SDL_free(overlay);
+	SDL_DestroySurface(overlay);
+	if (!blitSuccess)
+	{
+		SDL_DestroySurface(imageBg);
+		return NULL;
+	}
 
 	// Create texture
-	const Uint32 imageSize = (Uint32)imageBg->bytesPerPixel * (Uint32)imageBg->width * (Uint32)imageBg->height;
-	SDL_GPUTexture* texture = NeHe_CreateGPUTextureFromPixels(ctx, imageBg->pixels, imageSize, &(const SDL_GPUTextureCreateInfo)
-	{
-		.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
-		.usage  = SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET,
-		.width = (Uint32)imageBg->width, .height = (Uint32)imageBg->height, .layer_count_or_depth = 1,
-		.num_levels = 1,
-	}, false);
-	SDL_free(imageBg);
-
+	SDL_GPUTexture* texture = NeHe_CreateGPUTextureFromSurface(ctx, imageBg, false);
+	SDL_DestroySurface(imageBg);
 	return texture;
 }
 
@@ -265,8 +263,7 @@ static bool Lesson29_Init(NeHeContext* restrict ctx)
 		return false;
 	}
 
-	texture = LoadTexture(ctx);
-	if (!texture)
+	if ((texture = BuildTexture(ctx)) == NULL)
 	{
 		return false;
 	}
