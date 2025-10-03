@@ -1,4 +1,4 @@
-DXC := dxc
+DXC = dxc
 
 .POSIX:
 .SUFFIXES:

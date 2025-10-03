@@ -1,0 +1,268 @@
+DXC = dxc
+FXC = fxc
+
+.SUFFIXES :
+
+all: d3d12
+.PHONY: all d3d12 clean
+d3d12: data/shaders/lesson2.vtx.dxb data/shaders/lesson2.pxl.dxb data/shaders/lesson3.vtx.dxb data/shaders/lesson3.pxl.dxb data/shaders/lesson6.vtx.dxb data/shaders/lesson6.pxl.dxb data/shaders/lesson7.vtx.dxb data/shaders/lesson7.pxl.dxb data/shaders/lesson8.vtx.dxb data/shaders/lesson8.pxl.dxb data/shaders/lesson9.vtx.dxb data/shaders/lesson9.pxl.dxb data/shaders/lesson11.vtx.dxb data/shaders/lesson11.pxl.dxb data/shaders/lesson12.vtx.dxb data/shaders/lesson12.pxl.dxb data/shaders/lesson13.vtx.dxb data/shaders/lesson13.pxl.dxb data/shaders/lesson16_unlit_exp.vtx.dxb data/shaders/lesson16_unlit_exp.pxl.dxb data/shaders/lesson16_unlit_exp2.vtx.dxb data/shaders/lesson16_unlit_exp2.pxl.dxb data/shaders/lesson16_unlit_lin.vtx.dxb data/shaders/lesson16_unlit_lin.pxl.dxb data/shaders/lesson16_lit_exp.vtx.dxb data/shaders/lesson16_lit_exp.pxl.dxb data/shaders/lesson16_lit_exp2.vtx.dxb data/shaders/lesson16_lit_exp2.pxl.dxb data/shaders/lesson16_lit_lin.vtx.dxb data/shaders/lesson16_lit_lin.pxl.dxb data/shaders/lesson17.vtx.dxb data/shaders/lesson17.pxl.dxb data/shaders/lesson2.vtx.fxb data/shaders/lesson2.pxl.fxb data/shaders/lesson3.vtx.fxb data/shaders/lesson3.pxl.fxb data/shaders/lesson6.vtx.fxb data/shaders/lesson6.pxl.fxb data/shaders/lesson7.vtx.fxb data/shaders/lesson7.pxl.fxb data/shaders/lesson8.vtx.fxb data/shaders/lesson8.pxl.fxb data/shaders/lesson9.vtx.fxb data/shaders/lesson9.pxl.fxb data/shaders/lesson11.vtx.fxb data/shaders/lesson11.pxl.fxb data/shaders/lesson12.vtx.fxb data/shaders/lesson12.pxl.fxb data/shaders/lesson13.vtx.fxb data/shaders/lesson13.pxl.fxb data/shaders/lesson16_unlit_exp.vtx.fxb data/shaders/lesson16_unlit_exp.pxl.fxb data/shaders/lesson16_unlit_exp2.vtx.fxb data/shaders/lesson16_unlit_exp2.pxl.fxb data/shaders/lesson16_unlit_lin.vtx.fxb data/shaders/lesson16_unlit_lin.pxl.fxb data/shaders/lesson16_lit_exp.vtx.fxb data/shaders/lesson16_lit_exp.pxl.fxb data/shaders/lesson16_lit_exp2.vtx.fxb data/shaders/lesson16_lit_exp2.pxl.fxb data/shaders/lesson16_lit_lin.vtx.fxb data/shaders/lesson16_lit_lin.pxl.fxb data/shaders/lesson17.vtx.fxb data/shaders/lesson17.pxl.fxb
+
+data/shaders/lesson2.vtx.dxb: src/shaders/lesson2.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX  -Fo data/shaders/lesson2.vtx.dxb src/shaders/lesson2.hlsl
+
+data/shaders/lesson2.pxl.dxb: src/shaders/lesson2.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12  -Fo data/shaders/lesson2.pxl.dxb src/shaders/lesson2.hlsl
+
+data/shaders/lesson3.vtx.dxb: src/shaders/lesson3.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX  -Fo data/shaders/lesson3.vtx.dxb src/shaders/lesson3.hlsl
+
+data/shaders/lesson3.pxl.dxb: src/shaders/lesson3.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12  -Fo data/shaders/lesson3.pxl.dxb src/shaders/lesson3.hlsl
+
+data/shaders/lesson6.vtx.dxb: src/shaders/lesson6.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX  -Fo data/shaders/lesson6.vtx.dxb src/shaders/lesson6.hlsl
+
+data/shaders/lesson6.pxl.dxb: src/shaders/lesson6.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12  -Fo data/shaders/lesson6.pxl.dxb src/shaders/lesson6.hlsl
+
+data/shaders/lesson7.vtx.dxb: src/shaders/lesson7.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX  -Fo data/shaders/lesson7.vtx.dxb src/shaders/lesson7.hlsl
+
+data/shaders/lesson7.pxl.dxb: src/shaders/lesson7.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12  -Fo data/shaders/lesson7.pxl.dxb src/shaders/lesson7.hlsl
+
+data/shaders/lesson8.vtx.dxb: src/shaders/lesson8.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX  -Fo data/shaders/lesson8.vtx.dxb src/shaders/lesson8.hlsl
+
+data/shaders/lesson8.pxl.dxb: src/shaders/lesson8.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12  -Fo data/shaders/lesson8.pxl.dxb src/shaders/lesson8.hlsl
+
+data/shaders/lesson9.vtx.dxb: src/shaders/lesson9.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX  -Fo data/shaders/lesson9.vtx.dxb src/shaders/lesson9.hlsl
+
+data/shaders/lesson9.pxl.dxb: src/shaders/lesson9.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12  -Fo data/shaders/lesson9.pxl.dxb src/shaders/lesson9.hlsl
+
+data/shaders/lesson11.vtx.dxb: src/shaders/lesson11.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX  -Fo data/shaders/lesson11.vtx.dxb src/shaders/lesson11.hlsl
+
+data/shaders/lesson11.pxl.dxb: src/shaders/lesson11.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12  -Fo data/shaders/lesson11.pxl.dxb src/shaders/lesson11.hlsl
+
+data/shaders/lesson12.vtx.dxb: src/shaders/lesson12.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX  -Fo data/shaders/lesson12.vtx.dxb src/shaders/lesson12.hlsl
+
+data/shaders/lesson12.pxl.dxb: src/shaders/lesson12.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12  -Fo data/shaders/lesson12.pxl.dxb src/shaders/lesson12.hlsl
+
+data/shaders/lesson13.vtx.dxb: src/shaders/lesson13.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX  -Fo data/shaders/lesson13.vtx.dxb src/shaders/lesson13.hlsl
+
+data/shaders/lesson13.pxl.dxb: src/shaders/lesson13.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12  -Fo data/shaders/lesson13.pxl.dxb src/shaders/lesson13.hlsl
+
+data/shaders/lesson16_unlit_exp.vtx.dxb: src/shaders/lesson16.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX -DFOG_EXP -Fo data/shaders/lesson16_unlit_exp.vtx.dxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_unlit_exp.pxl.dxb: src/shaders/lesson16.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12 -DFOG_EXP -Fo data/shaders/lesson16_unlit_exp.pxl.dxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_unlit_exp2.vtx.dxb: src/shaders/lesson16.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX -DFOG_EXP2 -Fo data/shaders/lesson16_unlit_exp2.vtx.dxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_unlit_exp2.pxl.dxb: src/shaders/lesson16.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12 -DFOG_EXP2 -Fo data/shaders/lesson16_unlit_exp2.pxl.dxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_unlit_lin.vtx.dxb: src/shaders/lesson16.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX -DFOG_LINEAR -Fo data/shaders/lesson16_unlit_lin.vtx.dxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_unlit_lin.pxl.dxb: src/shaders/lesson16.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12 -DFOG_LINEAR -Fo data/shaders/lesson16_unlit_lin.pxl.dxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_lit_exp.vtx.dxb: src/shaders/lesson16.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX -DFOG_EXP -DLIGHTING -Fo data/shaders/lesson16_lit_exp.vtx.dxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_lit_exp.pxl.dxb: src/shaders/lesson16.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12 -DFOG_EXP -DLIGHTING -Fo data/shaders/lesson16_lit_exp.pxl.dxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_lit_exp2.vtx.dxb: src/shaders/lesson16.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX -DFOG_EXP2 -DLIGHTING -Fo data/shaders/lesson16_lit_exp2.vtx.dxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_lit_exp2.pxl.dxb: src/shaders/lesson16.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12 -DFOG_EXP2 -DLIGHTING -Fo data/shaders/lesson16_lit_exp2.pxl.dxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_lit_lin.vtx.dxb: src/shaders/lesson16.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX -DFOG_LINEAR -DLIGHTING -Fo data/shaders/lesson16_lit_lin.vtx.dxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_lit_lin.pxl.dxb: src/shaders/lesson16.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12 -DFOG_LINEAR -DLIGHTING -Fo data/shaders/lesson16_lit_lin.pxl.dxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson17.vtx.dxb: src/shaders/lesson17.hlsl
+	$(DXC) -E VertexMain -T vs_6_0 -DD3D12 -DVERTEX  -Fo data/shaders/lesson17.vtx.dxb src/shaders/lesson17.hlsl
+
+data/shaders/lesson17.pxl.dxb: src/shaders/lesson17.hlsl
+	$(DXC) -E PixelMain -T ps_6_0 -DD3D12  -Fo data/shaders/lesson17.pxl.dxb src/shaders/lesson17.hlsl
+
+data/shaders/lesson2.vtx.fxb: src/shaders/lesson2.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX  /Fo data/shaders/lesson2.vtx.fxb src/shaders/lesson2.hlsl
+
+data/shaders/lesson2.pxl.fxb: src/shaders/lesson2.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12  /Fo data/shaders/lesson2.pxl.fxb src/shaders/lesson2.hlsl
+
+data/shaders/lesson3.vtx.fxb: src/shaders/lesson3.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX  /Fo data/shaders/lesson3.vtx.fxb src/shaders/lesson3.hlsl
+
+data/shaders/lesson3.pxl.fxb: src/shaders/lesson3.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12  /Fo data/shaders/lesson3.pxl.fxb src/shaders/lesson3.hlsl
+
+data/shaders/lesson6.vtx.fxb: src/shaders/lesson6.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX  /Fo data/shaders/lesson6.vtx.fxb src/shaders/lesson6.hlsl
+
+data/shaders/lesson6.pxl.fxb: src/shaders/lesson6.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12  /Fo data/shaders/lesson6.pxl.fxb src/shaders/lesson6.hlsl
+
+data/shaders/lesson7.vtx.fxb: src/shaders/lesson7.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX  /Fo data/shaders/lesson7.vtx.fxb src/shaders/lesson7.hlsl
+
+data/shaders/lesson7.pxl.fxb: src/shaders/lesson7.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12  /Fo data/shaders/lesson7.pxl.fxb src/shaders/lesson7.hlsl
+
+data/shaders/lesson8.vtx.fxb: src/shaders/lesson8.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX  /Fo data/shaders/lesson8.vtx.fxb src/shaders/lesson8.hlsl
+
+data/shaders/lesson8.pxl.fxb: src/shaders/lesson8.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12  /Fo data/shaders/lesson8.pxl.fxb src/shaders/lesson8.hlsl
+
+data/shaders/lesson9.vtx.fxb: src/shaders/lesson9.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX  /Fo data/shaders/lesson9.vtx.fxb src/shaders/lesson9.hlsl
+
+data/shaders/lesson9.pxl.fxb: src/shaders/lesson9.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12  /Fo data/shaders/lesson9.pxl.fxb src/shaders/lesson9.hlsl
+
+data/shaders/lesson11.vtx.fxb: src/shaders/lesson11.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX  /Fo data/shaders/lesson11.vtx.fxb src/shaders/lesson11.hlsl
+
+data/shaders/lesson11.pxl.fxb: src/shaders/lesson11.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12  /Fo data/shaders/lesson11.pxl.fxb src/shaders/lesson11.hlsl
+
+data/shaders/lesson12.vtx.fxb: src/shaders/lesson12.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX  /Fo data/shaders/lesson12.vtx.fxb src/shaders/lesson12.hlsl
+
+data/shaders/lesson12.pxl.fxb: src/shaders/lesson12.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12  /Fo data/shaders/lesson12.pxl.fxb src/shaders/lesson12.hlsl
+
+data/shaders/lesson13.vtx.fxb: src/shaders/lesson13.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX  /Fo data/shaders/lesson13.vtx.fxb src/shaders/lesson13.hlsl
+
+data/shaders/lesson13.pxl.fxb: src/shaders/lesson13.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12  /Fo data/shaders/lesson13.pxl.fxb src/shaders/lesson13.hlsl
+
+data/shaders/lesson16_unlit_exp.vtx.fxb: src/shaders/lesson16.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX /DFOG_EXP /Fo data/shaders/lesson16_unlit_exp.vtx.fxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_unlit_exp.pxl.fxb: src/shaders/lesson16.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12 /DFOG_EXP /Fo data/shaders/lesson16_unlit_exp.pxl.fxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_unlit_exp2.vtx.fxb: src/shaders/lesson16.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX /DFOG_EXP2 /Fo data/shaders/lesson16_unlit_exp2.vtx.fxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_unlit_exp2.pxl.fxb: src/shaders/lesson16.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12 /DFOG_EXP2 /Fo data/shaders/lesson16_unlit_exp2.pxl.fxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_unlit_lin.vtx.fxb: src/shaders/lesson16.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX /DFOG_LINEAR /Fo data/shaders/lesson16_unlit_lin.vtx.fxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_unlit_lin.pxl.fxb: src/shaders/lesson16.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12 /DFOG_LINEAR /Fo data/shaders/lesson16_unlit_lin.pxl.fxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_lit_exp.vtx.fxb: src/shaders/lesson16.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX /DFOG_EXP /DLIGHTING /Fo data/shaders/lesson16_lit_exp.vtx.fxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_lit_exp.pxl.fxb: src/shaders/lesson16.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12 /DFOG_EXP /DLIGHTING /Fo data/shaders/lesson16_lit_exp.pxl.fxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_lit_exp2.vtx.fxb: src/shaders/lesson16.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX /DFOG_EXP2 /DLIGHTING /Fo data/shaders/lesson16_lit_exp2.vtx.fxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_lit_exp2.pxl.fxb: src/shaders/lesson16.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12 /DFOG_EXP2 /DLIGHTING /Fo data/shaders/lesson16_lit_exp2.pxl.fxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_lit_lin.vtx.fxb: src/shaders/lesson16.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX /DFOG_LINEAR /DLIGHTING /Fo data/shaders/lesson16_lit_lin.vtx.fxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson16_lit_lin.pxl.fxb: src/shaders/lesson16.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12 /DFOG_LINEAR /DLIGHTING /Fo data/shaders/lesson16_lit_lin.pxl.fxb src/shaders/lesson16.hlsl
+
+data/shaders/lesson17.vtx.fxb: src/shaders/lesson17.hlsl
+	$(FXC) /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX  /Fo data/shaders/lesson17.vtx.fxb src/shaders/lesson17.hlsl
+
+data/shaders/lesson17.pxl.fxb: src/shaders/lesson17.hlsl
+	$(FXC) /E PixelMain /T ps_5_1 /DD3D12  /Fo data/shaders/lesson17.pxl.fxb src/shaders/lesson17.hlsl
+
+.SILENT :
+clean:
+	ECHO Cleaning build files...
+	IF EXIST data\shaders\lesson2.vtx.dxb DEL /F /Q data\shaders\lesson2.vtx.dxb
+	IF EXIST data\shaders\lesson2.pxl.dxb DEL /F /Q data\shaders\lesson2.pxl.dxb
+	IF EXIST data\shaders\lesson3.vtx.dxb DEL /F /Q data\shaders\lesson3.vtx.dxb
+	IF EXIST data\shaders\lesson3.pxl.dxb DEL /F /Q data\shaders\lesson3.pxl.dxb
+	IF EXIST data\shaders\lesson6.vtx.dxb DEL /F /Q data\shaders\lesson6.vtx.dxb
+	IF EXIST data\shaders\lesson6.pxl.dxb DEL /F /Q data\shaders\lesson6.pxl.dxb
+	IF EXIST data\shaders\lesson7.vtx.dxb DEL /F /Q data\shaders\lesson7.vtx.dxb
+	IF EXIST data\shaders\lesson7.pxl.dxb DEL /F /Q data\shaders\lesson7.pxl.dxb
+	IF EXIST data\shaders\lesson8.vtx.dxb DEL /F /Q data\shaders\lesson8.vtx.dxb
+	IF EXIST data\shaders\lesson8.pxl.dxb DEL /F /Q data\shaders\lesson8.pxl.dxb
+	IF EXIST data\shaders\lesson9.vtx.dxb DEL /F /Q data\shaders\lesson9.vtx.dxb
+	IF EXIST data\shaders\lesson9.pxl.dxb DEL /F /Q data\shaders\lesson9.pxl.dxb
+	IF EXIST data\shaders\lesson11.vtx.dxb DEL /F /Q data\shaders\lesson11.vtx.dxb
+	IF EXIST data\shaders\lesson11.pxl.dxb DEL /F /Q data\shaders\lesson11.pxl.dxb
+	IF EXIST data\shaders\lesson12.vtx.dxb DEL /F /Q data\shaders\lesson12.vtx.dxb
+	IF EXIST data\shaders\lesson12.pxl.dxb DEL /F /Q data\shaders\lesson12.pxl.dxb
+	IF EXIST data\shaders\lesson13.vtx.dxb DEL /F /Q data\shaders\lesson13.vtx.dxb
+	IF EXIST data\shaders\lesson13.pxl.dxb DEL /F /Q data\shaders\lesson13.pxl.dxb
+	IF EXIST data\shaders\lesson16_unlit_exp.vtx.dxb DEL /F /Q data\shaders\lesson16_unlit_exp.vtx.dxb
+	IF EXIST data\shaders\lesson16_unlit_exp.pxl.dxb DEL /F /Q data\shaders\lesson16_unlit_exp.pxl.dxb
+	IF EXIST data\shaders\lesson16_unlit_exp2.vtx.dxb DEL /F /Q data\shaders\lesson16_unlit_exp2.vtx.dxb
+	IF EXIST data\shaders\lesson16_unlit_exp2.pxl.dxb DEL /F /Q data\shaders\lesson16_unlit_exp2.pxl.dxb
+	IF EXIST data\shaders\lesson16_unlit_lin.vtx.dxb DEL /F /Q data\shaders\lesson16_unlit_lin.vtx.dxb
+	IF EXIST data\shaders\lesson16_unlit_lin.pxl.dxb DEL /F /Q data\shaders\lesson16_unlit_lin.pxl.dxb
+	IF EXIST data\shaders\lesson16_lit_exp.vtx.dxb DEL /F /Q data\shaders\lesson16_lit_exp.vtx.dxb
+	IF EXIST data\shaders\lesson16_lit_exp.pxl.dxb DEL /F /Q data\shaders\lesson16_lit_exp.pxl.dxb
+	IF EXIST data\shaders\lesson16_lit_exp2.vtx.dxb DEL /F /Q data\shaders\lesson16_lit_exp2.vtx.dxb
+	IF EXIST data\shaders\lesson16_lit_exp2.pxl.dxb DEL /F /Q data\shaders\lesson16_lit_exp2.pxl.dxb
+	IF EXIST data\shaders\lesson16_lit_lin.vtx.dxb DEL /F /Q data\shaders\lesson16_lit_lin.vtx.dxb
+	IF EXIST data\shaders\lesson16_lit_lin.pxl.dxb DEL /F /Q data\shaders\lesson16_lit_lin.pxl.dxb
+	IF EXIST data\shaders\lesson17.vtx.dxb DEL /F /Q data\shaders\lesson17.vtx.dxb
+	IF EXIST data\shaders\lesson17.pxl.dxb DEL /F /Q data\shaders\lesson17.pxl.dxb
+	IF EXIST data\shaders\lesson2.vtx.fxb DEL /F /Q data\shaders\lesson2.vtx.fxb
+	IF EXIST data\shaders\lesson2.pxl.fxb DEL /F /Q data\shaders\lesson2.pxl.fxb
+	IF EXIST data\shaders\lesson3.vtx.fxb DEL /F /Q data\shaders\lesson3.vtx.fxb
+	IF EXIST data\shaders\lesson3.pxl.fxb DEL /F /Q data\shaders\lesson3.pxl.fxb
+	IF EXIST data\shaders\lesson6.vtx.fxb DEL /F /Q data\shaders\lesson6.vtx.fxb
+	IF EXIST data\shaders\lesson6.pxl.fxb DEL /F /Q data\shaders\lesson6.pxl.fxb
+	IF EXIST data\shaders\lesson7.vtx.fxb DEL /F /Q data\shaders\lesson7.vtx.fxb
+	IF EXIST data\shaders\lesson7.pxl.fxb DEL /F /Q data\shaders\lesson7.pxl.fxb
+	IF EXIST data\shaders\lesson8.vtx.fxb DEL /F /Q data\shaders\lesson8.vtx.fxb
+	IF EXIST data\shaders\lesson8.pxl.fxb DEL /F /Q data\shaders\lesson8.pxl.fxb
+	IF EXIST data\shaders\lesson9.vtx.fxb DEL /F /Q data\shaders\lesson9.vtx.fxb
+	IF EXIST data\shaders\lesson9.pxl.fxb DEL /F /Q data\shaders\lesson9.pxl.fxb
+	IF EXIST data\shaders\lesson11.vtx.fxb DEL /F /Q data\shaders\lesson11.vtx.fxb
+	IF EXIST data\shaders\lesson11.pxl.fxb DEL /F /Q data\shaders\lesson11.pxl.fxb
+	IF EXIST data\shaders\lesson12.vtx.fxb DEL /F /Q data\shaders\lesson12.vtx.fxb
+	IF EXIST data\shaders\lesson12.pxl.fxb DEL /F /Q data\shaders\lesson12.pxl.fxb
+	IF EXIST data\shaders\lesson13.vtx.fxb DEL /F /Q data\shaders\lesson13.vtx.fxb
+	IF EXIST data\shaders\lesson13.pxl.fxb DEL /F /Q data\shaders\lesson13.pxl.fxb
+	IF EXIST data\shaders\lesson16_unlit_exp.vtx.fxb DEL /F /Q data\shaders\lesson16_unlit_exp.vtx.fxb
+	IF EXIST data\shaders\lesson16_unlit_exp.pxl.fxb DEL /F /Q data\shaders\lesson16_unlit_exp.pxl.fxb
+	IF EXIST data\shaders\lesson16_unlit_exp2.vtx.fxb DEL /F /Q data\shaders\lesson16_unlit_exp2.vtx.fxb
+	IF EXIST data\shaders\lesson16_unlit_exp2.pxl.fxb DEL /F /Q data\shaders\lesson16_unlit_exp2.pxl.fxb
+	IF EXIST data\shaders\lesson16_unlit_lin.vtx.fxb DEL /F /Q data\shaders\lesson16_unlit_lin.vtx.fxb
+	IF EXIST data\shaders\lesson16_unlit_lin.pxl.fxb DEL /F /Q data\shaders\lesson16_unlit_lin.pxl.fxb
+	IF EXIST data\shaders\lesson16_lit_exp.vtx.fxb DEL /F /Q data\shaders\lesson16_lit_exp.vtx.fxb
+	IF EXIST data\shaders\lesson16_lit_exp.pxl.fxb DEL /F /Q data\shaders\lesson16_lit_exp.pxl.fxb
+	IF EXIST data\shaders\lesson16_lit_exp2.vtx.fxb DEL /F /Q data\shaders\lesson16_lit_exp2.vtx.fxb
+	IF EXIST data\shaders\lesson16_lit_exp2.pxl.fxb DEL /F /Q data\shaders\lesson16_lit_exp2.pxl.fxb
+	IF EXIST data\shaders\lesson16_lit_lin.vtx.fxb DEL /F /Q data\shaders\lesson16_lit_lin.vtx.fxb
+	IF EXIST data\shaders\lesson16_lit_lin.pxl.fxb DEL /F /Q data\shaders\lesson16_lit_lin.pxl.fxb
+	IF EXIST data\shaders\lesson17.vtx.fxb DEL /F /Q data\shaders\lesson17.vtx.fxb
+	IF EXIST data\shaders\lesson17.pxl.fxb DEL /F /Q data\shaders\lesson17.pxl.fxb

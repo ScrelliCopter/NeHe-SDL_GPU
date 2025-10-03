@@ -28,12 +28,14 @@ class Shader(NamedTuple):
 			self.output.with_name(f"{self.output.name}.{out_suffix}"),
 			self.definitions)
 
-	def definition_flags(self, flag: str = "-D") -> str | None:
+	def definition_flags(self, flag: str | None) -> str | None:
 		"""Get the shader's defines as flags
 
-		:param flag: Override the prepended flag (defaults to "-D")
+		:param flag: Optionally override the prepended flag (defaults to "-D")
 		:return:     List of flags
 		"""
+		if flag is None:
+			flag = "-D"
 		if self.definitions is None:
 			return None
 		return " ".join(f"{flag}{d}" for d in sorted(self.definitions))
@@ -73,6 +75,7 @@ class Rule(NamedTuple):
 	prerequisite: Pattern
 	target: Pattern
 	recipe: List[str]
+	def_flag: str | None = None
 
 
 @dataclass
@@ -100,13 +103,6 @@ class Writer(ABC):
 		pass
 
 	@staticmethod
-	def pattern_string(name: str, pat: Pattern, /) -> str:
-		if pat.folder is not None:
-			return f"{str(pat.folder.as_posix()).rstrip('/') or ''}/{name}{pat.suffix}"
-		else:
-			return f"{name}{pat.suffix}"
-
-	@staticmethod
 	def match_pattern(p: Path, pat: Pattern, /) -> bool:
 		if not "".join(p.suffixes).endswith(pat.suffix):
 			return False
@@ -123,7 +119,7 @@ class Writer(ABC):
 				if rule := next((rule for rule in self.configure.rules
 						if self.match_pattern(target.output, rule.target)
 						and self.match_pattern(target.source, rule.prerequisite)), None):
-					yield Dependency(str(target.source.as_posix()), str(target.output.as_posix()), rule.recipe, target.definition_flags())
+					yield Dependency(str(target.source.as_posix()), str(target.output.as_posix()), rule.recipe, target.definition_flags(rule.def_flag))
 				else:
 					rule = next(rule for rule in self.configure.rules if self.match_pattern(target.output, rule.target))
 					name = target.output.stem
@@ -134,7 +130,7 @@ class Writer(ABC):
 						rule = next(next_rule for next_rule in self.configure.rules
 							if rule.prerequisite == next_rule.target)
 						output = source
-					yield Dependency(str(target.source.as_posix()), output, rule.recipe, target.definition_flags())
+					yield Dependency(str(target.source.as_posix()), output, rule.recipe, target.definition_flags(rule.def_flag))
 
 		for group, targets in self.configure.meta.items():
 			yield group, list(unroll_targets(self, targets))
@@ -142,16 +138,26 @@ class Writer(ABC):
 
 class MakefileWriter(Writer):
 	@classmethod
-	def write_specials(self):
+	def write_specials(cls):
 		pass
+
+	@classmethod
+	def write_assignment(cls, name: str, left_pad: int, value: str, /):
+		print(f"{name:<{left_pad}} = {value}", file=cls.out)
 
 	@abstractmethod
-	def write_rules(self, macro_map: dict[str, str], /):
+	def write_rules(cls, macro_map: dict[str, str], /):
 		pass
 
-	def write_dependency(self, dependency: Dependency, macro_map: dict[str, str], explicit: bool, /):
+	@classmethod
+	def write_clean(cls, rule_name: str, group_file_names: Iterable[Iterable[str]]):
+		print("clean:", file=cls.out)
+		for filenames in group_file_names:
+			print(f"\trm -f", *filenames, file=cls.out)
+
+	def write_dependency(self, dependency: Dependency, macro_map: dict[str, str], explicit: bool, /, suffix: bool = False):
 		def write_rule(predicate: str, target: str, recipe: List[str], macro_map: dict[str, str], /):
-			print(f"{target}: {predicate}", file=self.out)
+			print(f"{predicate}{target}:" if suffix else f"{target}: {predicate}", file=self.out)
 			for line in recipe:
 				print("\t" + Template(line).substitute(macro_map), file=self.out)
 			print(file=self.out)
@@ -168,7 +174,7 @@ class MakefileWriter(Writer):
 			for name, value in self.configure.macros.items():
 				name_upper = name.upper()
 				macro_map.update({f"macro_{name}": f"$({name_upper})"})
-				print(f"{name_upper:<{left_pad}} := {value}", file=self.out)
+				self.write_assignment(name_upper, left_pad, value)
 			print(file=self.out)
 
 		self.write_specials()
@@ -183,9 +189,7 @@ class MakefileWriter(Writer):
 		self.dependencies = dict(self.unroll_dependencies())
 		self.write_rules(macro_map)
 
-		print("clean:", file=self.out)
-		for group in self.dependencies.values():
-			print(f"\trm -f", *(x[1] for x in group), file=self.out)
+		self.write_clean("clean", ((dep.target for dep in group) for group in self.dependencies.values()))
 
 
 class PosixMakefileWriter(MakefileWriter):
@@ -199,16 +203,47 @@ class PosixMakefileWriter(MakefileWriter):
 				self.write_dependency(dependency, macro_map, True)
 
 
+class NMakefileWriter(MakefileWriter):
+	def write_specials(self):
+		print(".SUFFIXES :", file=self.out)
+		print(file=self.out)
+
+	def write_rules(self, macro_map: dict[str, str], /):
+		for group in self.dependencies.values():
+			for dependency in group:
+				self.write_dependency(dependency, macro_map, True)
+
+	def write_clean(cls, rule_name: str, group_file_names: Iterable[Iterable[str]]):
+		print(".SILENT :", file=cls.out)
+		print("clean:", file=cls.out)
+		print("\tECHO Cleaning build files...", file=cls.out)
+		from pathlib import WindowsPath
+		for filenames in group_file_names:
+			for filename in filenames:
+				filename = str(WindowsPath(filename))
+				print(f"\tIF EXIST", filename, "DEL /F /Q", filename, file=cls.out)
+
+
 class GnuMakefileWriter(MakefileWriter):
+	def write_assignment(self, name: str, left_pad: int, value: str, /):
+		print(f"{name:<{left_pad}} := {value}", file=self.out)
+
 	def write_rules(self, macro_map: dict[str, str], /):
 		for group in self.dependencies.values():
 			for dependency in group:
 				if dependency.definitions:
 					self.write_dependency(dependency, macro_map, False)
+
+		def pattern_string(pat: Pattern, /) -> str:
+			if pat.folder is not None:
+				return f"{str(pat.folder.as_posix()).rstrip('/') or ''}/%{pat.suffix}"
+			else:
+				return f"%{pat.suffix}"
+
 		for rule in self.configure.rules:
 			self.write_dependency(Dependency(
-					self.pattern_string("%", rule.prerequisite),
-					self.pattern_string("%", rule.target),
+					pattern_string(rule.prerequisite),
+					pattern_string(rule.target),
 					rule.recipe, ""),
 				macro_map, False)
 
@@ -357,7 +392,8 @@ def compile_recipe(shader_groups: ShaderGroups, e: Environment) -> Configure:
 			"dxc": "dxc",
 		})
 
-	if use_dxc_spirv:
+	# Exclude DXC SPIR-V from NMake until Windows SDK builds DXC with -DENABLE_SPIRV_CODEGEN=ON
+	if use_dxc_spirv and not e.is_windows:
 		configure.meta["vulkan"] += \
 			list(shaders_suffixes(hlsl_spirv, "hlsl", ["vtx.spv", "frg.spv"]))
 		configure.rules += [
@@ -437,11 +473,13 @@ def compile_recipe(shader_groups: ShaderGroups, e: Environment) -> Configure:
 			Rule(
 				Pattern(e.src_dir, ".hlsl"),
 				Pattern(e.dest_dir, ".vtx.fxb"),
-				["$macro_fxc /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX $definitions /Fo $target $source"]),
+				["$macro_fxc /E VertexMain /T vs_5_1 /DD3D12 /DVERTEX $definitions /Fo $target $source"],
+				"/D"),
 			Rule(
 				Pattern(e.src_dir, ".hlsl"),
 				Pattern(e.dest_dir, ".pxl.fxb"),
-				["$macro_fxc /E PixelMain /T ps_5_1 /DD3D12 $definitions /Fo $target $source"]),
+				["$macro_fxc /E PixelMain /T ps_5_1 /DD3D12 $definitions /Fo $target $source"],
+				"/D"),
 		]
 
 	return configure
@@ -458,6 +496,7 @@ def build_makefiles(basedir: Path, /):
 	for writer, name, is_darwin, is_windows in (
 			(NinjaWriter, "build.ninja", False, False),
 			(GnuMakefileWriter, "Makefile.darwin", True, False),
+			(NMakefileWriter, "NMakefile.windows", False, True),
 			(PosixMakefileWriter, "Makefile.unix", False, False)):
 		if (makefile_path := basedir / "shaders" / name).is_file():
 			makefile_stat = os.stat(makefile_path)
