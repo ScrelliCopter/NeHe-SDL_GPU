@@ -468,7 +468,7 @@ def build_makefiles(basedir: Path, /):
 			groups = find_shaders(root, src_dir, dest_dir)
 
 		e = Environment(writer, name, src_dir, dest_dir, is_darwin, is_windows, False)
-		with basedir.joinpath("shaders", e.make_name).open("w") as out:
+		with basedir.joinpath("shaders", e.make_name).open("w", newline="\r\n" if is_windows else "\n") as out:
 			e.writer(out, compile_recipe(groups, e)).generate()
 
 
