@@ -217,10 +217,9 @@ class NMakefileWriter(MakefileWriter):
 		print(".SILENT :", file=cls.out)
 		print("clean:", file=cls.out)
 		print("\tECHO Cleaning build files...", file=cls.out)
-		from pathlib import WindowsPath
 		for filenames in group_file_names:
 			for filename in filenames:
-				filename = str(WindowsPath(filename))
+				filename = filename.replace("/", "\\")
 				print(f"\tIF EXIST", filename, "DEL /F /Q", filename, file=cls.out)
 
 
