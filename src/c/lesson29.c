@@ -71,16 +71,19 @@ static bool ImageBlit(
 
 	for (int row = 0; row < srcRect.h; ++row)
 	{
-		srcP += srcRect.x * bytesPerPixel;
-		dstP += dstOff.x * bytesPerPixel;
+		srcP += bytesPerPixel * srcRect.x;
+		dstP += bytesPerPixel * dstOff.x;
 		for (int col = 0; col < srcRect.w; ++col)
 		{
-			for (int i = 0; i < bytesPerPixel; ++i, ++srcP, ++dstP)
+			for (int i = 0; i < bytesPerPixel; ++i, ++dstP)
 			{
-				if (blend)
-					(*dstP) = (uint8_t)(((*srcP) * alpha + (*dstP) * (0xFF - alpha)) >> 8);
-				else
-					(*dstP) = (*srcP);
+				uint8_t s = (*srcP++);
+				// BUG: The following blending is completely broken, and will always result in channel components
+				//      maxing out at 255²/256 = 254 (including the alpha channel!)  The original maths is
+				//      preserved in order to match original program behaviour.  If you want to copy this
+				//      formula for some reason, you can fix the bug by either adding 1 to alpha, or by swapping
+				//      the bit-shift with a /255.  Please just use floats or SDL_BlitSurface instead though.
+				(*dstP) = blend ? (uint8_t)((s * alpha + (*dstP) * (0xFF - alpha)) >> 8) : s;
 			}
 		}
 		srcP += bytesPerPixel * (src->w - (srcRect.w + srcRect.x));
