@@ -6,7 +6,7 @@ SPDX-License-Identifier: Zlib
 import os
 import sys
 from abc import ABC, abstractmethod
-from collections import namedtuple, defaultdict
+from collections import namedtuple, defaultdict, OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 from string import Template
@@ -274,9 +274,9 @@ def find_shaders(root: Path, src_dir: Path, dest_dir: Path, /) -> ShaderGroups:
 	config = ConfigParser()
 	config.read(root / src_dir / "shaders.ini")
 
-	metal_shaders: set[Shader] = set()
-	glsl_shaders: set[Shader] = set()
-	hlsl_shaders: set[Shader] = set()
+	metal_shaders: list[Shader] = []
+	glsl_shaders: list[Shader] = []
+	hlsl_shaders: list[Shader] = []
 
 	for line in config.items("Shaders"):
 		tokens = line[1].split()
@@ -309,19 +309,23 @@ def find_shaders(root: Path, src_dir: Path, dest_dir: Path, /) -> ShaderGroups:
 			print(f"WARN: \"{glsl_source.name}\" exists but no \"{hlsl_source.name}\"")
 
 		if msl_exists:
-			metal_shaders.add(Shader(source_path, output_path, definitions))
+			metal_shaders.append(Shader(source_path, output_path, definitions))
 		if glsl_exists:
-			glsl_shaders.add(Shader(source_path, output_path, definitions))
+			glsl_shaders.append(Shader(source_path, output_path, definitions))
 		if hlsl_exists:
-			hlsl_shaders.add(Shader(source_path, output_path, definitions))
+			hlsl_shaders.append(Shader(source_path, output_path, definitions))
 
-	return ShaderGroups(metal_shaders, glsl_shaders, hlsl_shaders)
+	return ShaderGroups(
+		OrderedDict.fromkeys(metal_shaders),
+		OrderedDict.fromkeys(glsl_shaders),
+		OrderedDict.fromkeys(hlsl_shaders))
 
 
 def compile_recipe(shader_groups: ShaderGroups, e: Environment) -> Configure:
 	import re
-
-	hlsl_spirv = shader_groups.hlsl - shader_groups.glsl
+	def shader_sort(shader: Shader):
+		return [int(x) if x.isdigit() else x.lower() for x in re.split(r"(\d+)", str(shader.output))]
+	hlsl_spirv = sorted(shader_groups.hlsl.keys() - shader_groups.glsl.keys(), key=shader_sort)
 	use_glslang = bool(shader_groups.glsl)
 	use_dxc_spirv = bool(hlsl_spirv)
 	use_metal = e.is_darwin and bool(shader_groups.metal)
@@ -330,17 +334,13 @@ def compile_recipe(shader_groups: ShaderGroups, e: Environment) -> Configure:
 
 	configure = Configure({}, defaultdict(list), [])
 
-	def shader_sort(shader: Shader):
-		return [int(x) if x.isdigit() else x.lower() for x in re.split(r"(\d+)", str(shader.output))]
-
 	# Make rules for SPIR-V shaders for Vulkan
 	if use_glslang:
 		configure.macros.update({
 			"glslang": "glslang",
 		})
 		configure.meta["vulkan"] += \
-			sorted(shaders_suffixes(shader_groups.glsl, "glsl", ["vtx.spv", "frg.spv"]),
-				key=shader_sort)
+			list(shaders_suffixes(shader_groups.glsl, "glsl", ["vtx.spv", "frg.spv"]))
 		configure.rules += [
 			Rule(
 				Pattern(e.src_dir, ".glsl"),
@@ -359,7 +359,7 @@ def compile_recipe(shader_groups: ShaderGroups, e: Environment) -> Configure:
 
 	if use_dxc_spirv:
 		configure.meta["vulkan"] += \
-			sorted(shaders_suffixes(hlsl_spirv, "hlsl", ["vtx.spv", "frg.spv"]), key=shader_sort)
+			list(shaders_suffixes(hlsl_spirv, "hlsl", ["vtx.spv", "frg.spv"]))
 		configure.rules += [
 			Rule(
 				Pattern(e.src_dir, ".hlsl"),
@@ -393,7 +393,7 @@ def compile_recipe(shader_groups: ShaderGroups, e: Environment) -> Configure:
 			])
 		})
 		configure.meta["metal"] += \
-			sorted(shaders_suffixes(shader_groups.metal, "metal", "metallib"), key=shader_sort)
+			list(shaders_suffixes(shader_groups.metal, "metal", "metallib"))
 		configure.rules += [
 			Rule(
 				Pattern(e.src_dir, ".metal"),
@@ -414,8 +414,7 @@ def compile_recipe(shader_groups: ShaderGroups, e: Environment) -> Configure:
 	# Make rules for HLSL shaders on Windows
 	if use_dxc:
 		configure.meta["d3d12"] += \
-			sorted(shaders_suffixes(shader_groups.hlsl, "hlsl", ["vtx.dxb", "pxl.dxb"]),
-				key=shader_sort)
+			list(shaders_suffixes(shader_groups.hlsl, "hlsl", ["vtx.dxb", "pxl.dxb"]))
 		configure.rules += [
 			Rule(
 				Pattern(e.src_dir, ".hlsl"),
@@ -433,8 +432,7 @@ def compile_recipe(shader_groups: ShaderGroups, e: Environment) -> Configure:
 			"fxc": "fxc",
 		})
 		configure.meta["d3d12"] += \
-			sorted(shaders_suffixes(shader_groups.hlsl, "hlsl", ["vtx.fxb", "pxl.fxb"]),
-				key=shader_sort)
+			list(shaders_suffixes(shader_groups.hlsl, "hlsl", ["vtx.fxb", "pxl.fxb"]))
 		configure.rules += [
 			Rule(
 				Pattern(e.src_dir, ".hlsl"),

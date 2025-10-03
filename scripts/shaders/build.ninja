@@ -12,93 +12,93 @@ rule hlsl_dxc_vtx_dxb
 rule hlsl_dxc_pxl_dxb
  command = $dxc -E PixelMain -T ps_6_0 -DD3D12 $definitions -Fo $out $in
 
-build data/shaders/lesson2.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson2.hlsl
 build data/shaders/lesson2.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson2.hlsl
-build data/shaders/lesson3.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson3.hlsl
+build data/shaders/lesson2.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson2.hlsl
 build data/shaders/lesson3.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson3.hlsl
-build data/shaders/lesson6.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson6.hlsl
+build data/shaders/lesson3.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson3.hlsl
 build data/shaders/lesson6.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson6.hlsl
-build data/shaders/lesson7.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson7.hlsl
+build data/shaders/lesson6.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson6.hlsl
 build data/shaders/lesson7.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson7.hlsl
-build data/shaders/lesson8.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson8.hlsl
+build data/shaders/lesson7.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson7.hlsl
 build data/shaders/lesson8.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson8.hlsl
-build data/shaders/lesson9.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson9.hlsl
+build data/shaders/lesson8.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson8.hlsl
 build data/shaders/lesson9.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson9.hlsl
-build data/shaders/lesson11.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson11.hlsl
+build data/shaders/lesson9.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson9.hlsl
 build data/shaders/lesson11.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson11.hlsl
-build data/shaders/lesson12.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson12.hlsl
+build data/shaders/lesson11.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson11.hlsl
 build data/shaders/lesson12.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson12.hlsl
-build data/shaders/lesson13.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson13.hlsl
+build data/shaders/lesson12.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson12.hlsl
 build data/shaders/lesson13.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson13.hlsl
-build data/shaders/lesson16_lit_exp2.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson16.hlsl
- definitions = -DFOG_EXP2 -DLIGHTING
-build data/shaders/lesson16_lit_exp2.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson16.hlsl
- definitions = -DFOG_EXP2 -DLIGHTING
-build data/shaders/lesson16_lit_exp.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson16.hlsl
- definitions = -DFOG_EXP -DLIGHTING
+build data/shaders/lesson13.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson13.hlsl
 build data/shaders/lesson16_lit_exp.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson16.hlsl
  definitions = -DFOG_EXP -DLIGHTING
-build data/shaders/lesson16_lit_lin.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson16.hlsl
- definitions = -DFOG_LINEAR -DLIGHTING
+build data/shaders/lesson16_lit_exp.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson16.hlsl
+ definitions = -DFOG_EXP -DLIGHTING
+build data/shaders/lesson16_lit_exp2.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson16.hlsl
+ definitions = -DFOG_EXP2 -DLIGHTING
+build data/shaders/lesson16_lit_exp2.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson16.hlsl
+ definitions = -DFOG_EXP2 -DLIGHTING
 build data/shaders/lesson16_lit_lin.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson16.hlsl
  definitions = -DFOG_LINEAR -DLIGHTING
-build data/shaders/lesson16_unlit_exp2.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson16.hlsl
- definitions = -DFOG_EXP2
-build data/shaders/lesson16_unlit_exp2.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson16.hlsl
- definitions = -DFOG_EXP2
-build data/shaders/lesson16_unlit_exp.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson16.hlsl
- definitions = -DFOG_EXP
+build data/shaders/lesson16_lit_lin.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson16.hlsl
+ definitions = -DFOG_LINEAR -DLIGHTING
 build data/shaders/lesson16_unlit_exp.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson16.hlsl
  definitions = -DFOG_EXP
-build data/shaders/lesson16_unlit_lin.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson16.hlsl
- definitions = -DFOG_LINEAR
+build data/shaders/lesson16_unlit_exp.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson16.hlsl
+ definitions = -DFOG_EXP
+build data/shaders/lesson16_unlit_exp2.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson16.hlsl
+ definitions = -DFOG_EXP2
+build data/shaders/lesson16_unlit_exp2.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson16.hlsl
+ definitions = -DFOG_EXP2
 build data/shaders/lesson16_unlit_lin.vtx.spv: hlsl_dxc_vtx_spv src/shaders/lesson16.hlsl
  definitions = -DFOG_LINEAR
-build data/shaders/lesson2.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson2.hlsl
+build data/shaders/lesson16_unlit_lin.frg.spv: hlsl_dxc_frg_spv src/shaders/lesson16.hlsl
+ definitions = -DFOG_LINEAR
 build data/shaders/lesson2.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson2.hlsl
-build data/shaders/lesson3.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson3.hlsl
+build data/shaders/lesson2.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson2.hlsl
 build data/shaders/lesson3.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson3.hlsl
-build data/shaders/lesson6.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson6.hlsl
+build data/shaders/lesson3.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson3.hlsl
 build data/shaders/lesson6.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson6.hlsl
-build data/shaders/lesson7.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson7.hlsl
+build data/shaders/lesson6.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson6.hlsl
 build data/shaders/lesson7.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson7.hlsl
-build data/shaders/lesson8.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson8.hlsl
+build data/shaders/lesson7.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson7.hlsl
 build data/shaders/lesson8.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson8.hlsl
-build data/shaders/lesson9.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson9.hlsl
+build data/shaders/lesson8.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson8.hlsl
 build data/shaders/lesson9.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson9.hlsl
-build data/shaders/lesson11.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson11.hlsl
+build data/shaders/lesson9.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson9.hlsl
 build data/shaders/lesson11.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson11.hlsl
-build data/shaders/lesson12.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson12.hlsl
+build data/shaders/lesson11.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson11.hlsl
 build data/shaders/lesson12.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson12.hlsl
-build data/shaders/lesson13.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson13.hlsl
+build data/shaders/lesson12.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson12.hlsl
 build data/shaders/lesson13.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson13.hlsl
-build data/shaders/lesson16_lit_exp2.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson16.hlsl
- definitions = -DFOG_EXP2 -DLIGHTING
-build data/shaders/lesson16_lit_exp2.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson16.hlsl
- definitions = -DFOG_EXP2 -DLIGHTING
-build data/shaders/lesson16_lit_exp.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson16.hlsl
- definitions = -DFOG_EXP -DLIGHTING
-build data/shaders/lesson16_lit_exp.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson16.hlsl
- definitions = -DFOG_EXP -DLIGHTING
-build data/shaders/lesson16_lit_lin.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson16.hlsl
- definitions = -DFOG_LINEAR -DLIGHTING
-build data/shaders/lesson16_lit_lin.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson16.hlsl
- definitions = -DFOG_LINEAR -DLIGHTING
-build data/shaders/lesson16_unlit_exp2.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson16.hlsl
- definitions = -DFOG_EXP2
-build data/shaders/lesson16_unlit_exp2.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson16.hlsl
- definitions = -DFOG_EXP2
-build data/shaders/lesson16_unlit_exp.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson16.hlsl
- definitions = -DFOG_EXP
+build data/shaders/lesson13.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson13.hlsl
 build data/shaders/lesson16_unlit_exp.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson16.hlsl
  definitions = -DFOG_EXP
-build data/shaders/lesson16_unlit_lin.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson16.hlsl
- definitions = -DFOG_LINEAR
+build data/shaders/lesson16_unlit_exp.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson16.hlsl
+ definitions = -DFOG_EXP
+build data/shaders/lesson16_unlit_exp2.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson16.hlsl
+ definitions = -DFOG_EXP2
+build data/shaders/lesson16_unlit_exp2.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson16.hlsl
+ definitions = -DFOG_EXP2
 build data/shaders/lesson16_unlit_lin.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson16.hlsl
  definitions = -DFOG_LINEAR
+build data/shaders/lesson16_unlit_lin.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson16.hlsl
+ definitions = -DFOG_LINEAR
+build data/shaders/lesson16_lit_exp.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson16.hlsl
+ definitions = -DFOG_EXP -DLIGHTING
+build data/shaders/lesson16_lit_exp.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson16.hlsl
+ definitions = -DFOG_EXP -DLIGHTING
+build data/shaders/lesson16_lit_exp2.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson16.hlsl
+ definitions = -DFOG_EXP2 -DLIGHTING
+build data/shaders/lesson16_lit_exp2.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson16.hlsl
+ definitions = -DFOG_EXP2 -DLIGHTING
+build data/shaders/lesson16_lit_lin.vtx.dxb: hlsl_dxc_vtx_dxb src/shaders/lesson16.hlsl
+ definitions = -DFOG_LINEAR -DLIGHTING
+build data/shaders/lesson16_lit_lin.pxl.dxb: hlsl_dxc_pxl_dxb src/shaders/lesson16.hlsl
+ definitions = -DFOG_LINEAR -DLIGHTING
 
 build all: phony vulkan d3d12
-build vulkan: phony data/shaders/lesson2.frg.spv data/shaders/lesson2.vtx.spv data/shaders/lesson3.frg.spv data/shaders/lesson3.vtx.spv data/shaders/lesson6.frg.spv data/shaders/lesson6.vtx.spv data/shaders/lesson7.frg.spv data/shaders/lesson7.vtx.spv data/shaders/lesson8.frg.spv data/shaders/lesson8.vtx.spv data/shaders/lesson9.frg.spv data/shaders/lesson9.vtx.spv data/shaders/lesson11.frg.spv data/shaders/lesson11.vtx.spv data/shaders/lesson12.frg.spv data/shaders/lesson12.vtx.spv data/shaders/lesson13.frg.spv data/shaders/lesson13.vtx.spv data/shaders/lesson16_lit_exp2.frg.spv data/shaders/lesson16_lit_exp2.vtx.spv data/shaders/lesson16_lit_exp.frg.spv data/shaders/lesson16_lit_exp.vtx.spv data/shaders/lesson16_lit_lin.frg.spv data/shaders/lesson16_lit_lin.vtx.spv data/shaders/lesson16_unlit_exp2.frg.spv data/shaders/lesson16_unlit_exp2.vtx.spv data/shaders/lesson16_unlit_exp.frg.spv data/shaders/lesson16_unlit_exp.vtx.spv data/shaders/lesson16_unlit_lin.frg.spv data/shaders/lesson16_unlit_lin.vtx.spv
-build d3d12: phony data/shaders/lesson2.pxl.dxb data/shaders/lesson2.vtx.dxb data/shaders/lesson3.pxl.dxb data/shaders/lesson3.vtx.dxb data/shaders/lesson6.pxl.dxb data/shaders/lesson6.vtx.dxb data/shaders/lesson7.pxl.dxb data/shaders/lesson7.vtx.dxb data/shaders/lesson8.pxl.dxb data/shaders/lesson8.vtx.dxb data/shaders/lesson9.pxl.dxb data/shaders/lesson9.vtx.dxb data/shaders/lesson11.pxl.dxb data/shaders/lesson11.vtx.dxb data/shaders/lesson12.pxl.dxb data/shaders/lesson12.vtx.dxb data/shaders/lesson13.pxl.dxb data/shaders/lesson13.vtx.dxb data/shaders/lesson16_lit_exp2.pxl.dxb data/shaders/lesson16_lit_exp2.vtx.dxb data/shaders/lesson16_lit_exp.pxl.dxb data/shaders/lesson16_lit_exp.vtx.dxb data/shaders/lesson16_lit_lin.pxl.dxb data/shaders/lesson16_lit_lin.vtx.dxb data/shaders/lesson16_unlit_exp2.pxl.dxb data/shaders/lesson16_unlit_exp2.vtx.dxb data/shaders/lesson16_unlit_exp.pxl.dxb data/shaders/lesson16_unlit_exp.vtx.dxb data/shaders/lesson16_unlit_lin.pxl.dxb data/shaders/lesson16_unlit_lin.vtx.dxb
+build vulkan: phony data/shaders/lesson2.vtx.spv data/shaders/lesson2.frg.spv data/shaders/lesson3.vtx.spv data/shaders/lesson3.frg.spv data/shaders/lesson6.vtx.spv data/shaders/lesson6.frg.spv data/shaders/lesson7.vtx.spv data/shaders/lesson7.frg.spv data/shaders/lesson8.vtx.spv data/shaders/lesson8.frg.spv data/shaders/lesson9.vtx.spv data/shaders/lesson9.frg.spv data/shaders/lesson11.vtx.spv data/shaders/lesson11.frg.spv data/shaders/lesson12.vtx.spv data/shaders/lesson12.frg.spv data/shaders/lesson13.vtx.spv data/shaders/lesson13.frg.spv data/shaders/lesson16_lit_exp.vtx.spv data/shaders/lesson16_lit_exp.frg.spv data/shaders/lesson16_lit_exp2.vtx.spv data/shaders/lesson16_lit_exp2.frg.spv data/shaders/lesson16_lit_lin.vtx.spv data/shaders/lesson16_lit_lin.frg.spv data/shaders/lesson16_unlit_exp.vtx.spv data/shaders/lesson16_unlit_exp.frg.spv data/shaders/lesson16_unlit_exp2.vtx.spv data/shaders/lesson16_unlit_exp2.frg.spv data/shaders/lesson16_unlit_lin.vtx.spv data/shaders/lesson16_unlit_lin.frg.spv
+build d3d12: phony data/shaders/lesson2.vtx.dxb data/shaders/lesson2.pxl.dxb data/shaders/lesson3.vtx.dxb data/shaders/lesson3.pxl.dxb data/shaders/lesson6.vtx.dxb data/shaders/lesson6.pxl.dxb data/shaders/lesson7.vtx.dxb data/shaders/lesson7.pxl.dxb data/shaders/lesson8.vtx.dxb data/shaders/lesson8.pxl.dxb data/shaders/lesson9.vtx.dxb data/shaders/lesson9.pxl.dxb data/shaders/lesson11.vtx.dxb data/shaders/lesson11.pxl.dxb data/shaders/lesson12.vtx.dxb data/shaders/lesson12.pxl.dxb data/shaders/lesson13.vtx.dxb data/shaders/lesson13.pxl.dxb data/shaders/lesson16_unlit_exp.vtx.dxb data/shaders/lesson16_unlit_exp.pxl.dxb data/shaders/lesson16_unlit_exp2.vtx.dxb data/shaders/lesson16_unlit_exp2.pxl.dxb data/shaders/lesson16_unlit_lin.vtx.dxb data/shaders/lesson16_unlit_lin.pxl.dxb data/shaders/lesson16_lit_exp.vtx.dxb data/shaders/lesson16_lit_exp.pxl.dxb data/shaders/lesson16_lit_exp2.vtx.dxb data/shaders/lesson16_lit_exp2.pxl.dxb data/shaders/lesson16_lit_lin.vtx.dxb data/shaders/lesson16_lit_lin.pxl.dxb
 
 default all
