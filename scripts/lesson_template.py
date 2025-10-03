@@ -39,7 +39,18 @@ class SourceGenC:
 
 	@staticmethod
 	def sanitise_string(s: str, /) -> str:
-		return s.encode("unicode-escape").decode("utf-8")
+		def cstr_chr(c: str) -> str:
+			if m := {
+					"\a": "\\a", "\b": "\\b", "\f": "\\f", "\n": "\\n", "\r": "\\r",
+					"\t": "\\t", "\v": "\\v", "\\": "\\\\", "\"": "\\\"" }.get(c):
+				return m
+			elif (i := ord(c)) < 0x7F:
+				return c if c.isprintable() else f"\\x{i:0X2}"
+			elif i < 0x10000:
+				return f"\\u{i:04X}"
+			else:
+				return f"\\U{i:08X}"
+		return "".join(cstr_chr(c) for c in s)
 
 	@staticmethod
 	def global_field(label: str, field_type: str, /) -> str:
