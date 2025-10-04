@@ -48,14 +48,46 @@ static bool ImageReadRAW(const NeHeContext* restrict ctx, SDL_Surface* restrict 
 }
 
 static bool ImageBlit(
-	SDL_Surface* restrict src, const SDL_Rect srcRect,
-	SDL_Surface* restrict dst, const SDL_Point dstOff,
+	SDL_Surface* restrict src, SDL_Rect srcRect,
+	SDL_Surface* restrict dst, SDL_Point dstPos,
 	bool blend, int alpha)
 {
 	SDL_assert(src->format == dst->format);
 	const int bytesPerPixel = SDL_BYTESPERPIXEL(src->format);
 
+	// Clamp input alpha
 	alpha = SDL_clamp(alpha, 0, 0xFF);
+	if (blend && alpha == 0)
+		return true;
+
+	// Clamp input rectangles
+	srcRect.x = SDL_clamp(srcRect.x, 0, src->w);
+	srcRect.y = SDL_clamp(srcRect.y, 0, src->h);
+	srcRect.w = SDL_clamp(srcRect.x + srcRect.w, 0, src->h) - srcRect.x;
+	srcRect.h = SDL_clamp(srcRect.y + srcRect.h, 0, src->h) - srcRect.y;
+	int dstW = srcRect.w, dstH = srcRect.h;
+	if (dstPos.x < 0)
+	{
+		dstW = SDL_min(srcRect.w + dstPos.x, dst->w);
+		srcRect.x -= dstPos.x;
+		dstPos.x = 0;
+	}
+	else if (dstPos.x + srcRect.w > dst->w)
+	{
+		dstW = dst->w - dstPos.x;
+	}
+	if (dstPos.y < 0)
+	{
+		dstH = SDL_min(srcRect.h + dstPos.y, dst->h);
+		srcRect.y -= dstPos.y;
+		dstPos.y = 0;
+	}
+	else if (dstPos.y + srcRect.h > dst->h)
+	{
+		dstH = dst->h - dstPos.y;
+	}
+	if (dstW <= 0 || dstH <= 0)
+		return true;
 
 	// Lock surfaces for read/write
 	if (!SDL_LockSurface(src) || !SDL_LockSurface(dst))
@@ -66,28 +98,27 @@ static bool ImageBlit(
 		return false;
 	}
 
-	const uint8_t* srcP = &((uint8_t*)src->pixels)[srcRect.y * src->pitch];
-	uint8_t* dstP = &((uint8_t*)dst->pixels)[dstOff.y * dst->pitch];
-
-	for (int row = 0; row < srcRect.h; ++row)
+	// Perform region copy
+	const uint8_t* srcPixels = (const uint8_t*)src->pixels;
+	uint8_t* dstPixels = (uint8_t*)dst->pixels;
+	for (int row = 0; row < + dstH; ++row)
 	{
-		srcP += bytesPerPixel * srcRect.x;
-		dstP += bytesPerPixel * dstOff.x;
-		for (int col = 0; col < srcRect.w; ++col)
+		const uint8_t* srcRow = &srcPixels[(srcRect.y + row) * src->pitch + srcRect.x * bytesPerPixel];
+		uint8_t* dstRow = &dstPixels[(dstPos.y + row) * dst->pitch + dstPos.x * bytesPerPixel];
+
+		for (int col = 0; col < dstW; ++col)
 		{
-			for (int i = 0; i < bytesPerPixel; ++i, ++dstP)
+			for (int i = 0; i < bytesPerPixel; ++i, ++dstRow)
 			{
-				uint8_t s = (*srcP++);
+				uint8_t s = (*srcRow++);
 				// BUG: The following blending is completely broken, and will always result in channel components
 				//      maxing out at 255²/256 = 254 (including the alpha channel!)  The original maths is
 				//      preserved in order to match original program behaviour.  If you want to copy this
 				//      formula for some reason, you can fix the bug by either adding 1 to alpha, or by swapping
 				//      the bit-shift with a /255.  Please just use floats or SDL_BlitSurface instead though.
-				(*dstP) = blend ? (uint8_t)((s * alpha + (*dstP) * (0xFF - alpha)) >> 8) : s;
+				(*dstRow) = blend ? (uint8_t)((s * alpha + (*dstRow) * (0xFF - alpha)) >> 8) : s;
 			}
 		}
-		srcP += bytesPerPixel * (src->w - (srcRect.w + srcRect.x));
-		dstP += bytesPerPixel * (dst->w - (srcRect.w + dstOff.x));
 	}
 
 	SDL_UnlockSurface(dst);
