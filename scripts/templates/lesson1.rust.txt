@@ -20,7 +20,7 @@ impl AppImplementation for Lesson${lesson_num}
 	const WIDTH: i32 = 640;
 	const HEIGHT: i32 = 480;
 $appconfig_depthfmt$lesson_func_resize
-	fn draw(&mut self, _ctx: &NeHeContext, cmd: *mut SDL_GPUCommandBuffer, swapchain: *mut SDL_GPUTexture)
+	fn draw(&mut self, $lesson1_draw_ctx: &NeHeContext, cmd: *mut SDL_GPUCommandBuffer, swapchain: *mut SDL_GPUTexture)
 	{
 		let mut color_info = SDL_GPUColorTargetInfo::default();
 		color_info.texture     = swapchain;
@@ -30,7 +30,7 @@ $appconfig_depthfmt$lesson_func_resize
 $lesson_struct_depth
 		unsafe
 		{
-			let pass = SDL_BeginGPURenderPass(cmd, &color_info, 1, $lesson_pass_depth);
+			let pass = SDL_BeginGPURenderPass(cmd, &color_info, 1, $depth_info_ref);
 			SDL_EndGPURenderPass(pass);
 		}
 	}$lesson_func_key

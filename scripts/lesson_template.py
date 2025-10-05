@@ -104,13 +104,7 @@ class SourceGenerator:
 		self._globals = lang_toml.get("globals", "\n$fields\n\n")
 		self._global_field = lang_toml["global_field"]
 		self._empty_globals_semicolon = ";" if lang_toml.get("empty_globals_semicolon", False) else ""
-		self._appconfig_depthfmt = lang_toml["appconfig_depthfmt"]
-		self._depth_info_ref = lang_toml["depth_info_ref"]
-		self._null = lang_toml["null"]
 		self._matrix_type = lang_toml.get("matrix_type", "Mtx")
-		self._struct_depth = lang_toml["struct_depth"]
-		self.func_resize_projection = lang_toml["func_resize_projection"]
-		self.func_keys = lang_toml["func_keys"]
 
 	@staticmethod
 	def sanitise_string(s: str, /) -> str:
@@ -179,10 +173,6 @@ class SourceGenerator:
 			yield line
 		yield "};"
 
-	@staticmethod
-	def func(func_str: str, lesson_num: int) -> str:
-		return "\n" + Template(func_str).substitute({"lesson_num": f"{lesson_num}"})
-
 	def template_mapping(self, o: Options) -> dict[str, str]:
 		def macros_from_condition(cond: bool, name: str) -> dict[str, str]:
 			on = self.conditions.get(name, {})
@@ -196,16 +186,10 @@ class SourceGenerator:
 			"lesson_num": f"{o.lesson_num}",
 			"lesson_title": self.sanitise_string(o.title),
 			"lesson_definitions": self.global_field("projection", self._matrix_type) if o.projection else self._empty_globals_semicolon,
-			"lesson_struct_depth": "" if o.depthfmt_suffix is None else f"\n{self._struct_depth}",
-			"lesson_pass_depth": self._null if o.depthfmt_suffix is None else self._depth_info_ref,
-			"lesson_func_resize": self.func(self.func_resize_projection, o.lesson_num) if o.projection else "",
-			"lesson_func_key": self.func(self.func_keys, o.lesson_num) if o.key else "",
-			"appconfig_depthfmt": "" if o.depthfmt_suffix is None else Template(self._appconfig_depthfmt).substitute({'depth_format': f'SDL_GPU_TEXTUREFORMAT_{o.depthfmt_suffix}'}),
-			"appconfig_resize": f"Lesson{o.lesson_num}_Resize" if o.projection else "NULL",
-			"appconfig_key": f",\n\t{'\t\n'.join(self.initialiser_field('key', f'Lesson{o.lesson_num}_Key', True))}" if o.key else "",
+			"depth_format": f"SDL_GPU_TEXTUREFORMAT_{o.depthfmt_suffix}" if o.depthfmt_suffix else "",
 			**macros_from_condition(o.projection, "projection"),
 			**macros_from_condition(o.key, "key"),
-			**macros_from_condition(bool(o.depthfmt_suffix), "depth_format"),
+			**macros_from_condition(bool(o.depthfmt_suffix), "depth"),
 		}
 
 
@@ -231,8 +215,10 @@ def main():
 
 	with template_dir.joinpath(template_filename).open("r") as src:
 		t = Template(src.read())
+	mapping = source_gen.template_mapping(o)
+	t = Template(t.substitute(mapping))  # HACK: double expand macros for now
 	with root.joinpath(dest_dir, output_filename).open("w") as out:
-		out.write(t.substitute(source_gen.template_mapping(o)))
+		out.write(t.substitute(mapping))
 
 
 if __name__ == "__main__":

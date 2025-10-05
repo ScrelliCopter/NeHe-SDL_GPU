@@ -31,7 +31,7 @@ static void Lesson${lesson_num}_Draw(NeHeContext* restrict ctx, SDL_GPUCommandBu
 		.store_op = SDL_GPU_STOREOP_STORE
 	};
 $lesson_struct_depth
-	SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, $lesson_pass_depth);
+	SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, $depth_info_ref);
 
 	
 

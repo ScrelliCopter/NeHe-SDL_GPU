@@ -43,7 +43,7 @@ $lesson_func_resize
 $lesson_struct_depth
 		unsafe
 		{
-			let pass = SDL_BeginGPURenderPass(cmd, &color_info, 1, $lesson_pass_depth);
+			let pass = SDL_BeginGPURenderPass(cmd, &color_info, 1, $depth_info_ref);
 
 			
 

@@ -3,11 +3,12 @@ file_extension = "swift"
 swift_subdir = true
 globals = "\n$fields\n"
 global_field = "\tvar $label: $field_type"
+matrix_type = "simd_float4x4"
+
+[condition.depth]
 appconfig_depthfmt = ",\n\t\tcreateDepthBuffer: $depth_format"
 depth_info_ref = "&depthInfo"
-null = "nil"
-matrix_type = "simd_float4x4"
-struct_depth = """
+lesson_struct_depth = """
 		var depthInfo = SDL_GPUDepthStencilTargetInfo()
 		depthInfo.texture          = ctx.depthTexture
 		depthInfo.clear_depth      = 1.0
@@ -17,24 +18,33 @@ struct_depth = """
 		depthInfo.stencil_store_op = SDL_GPU_STOREOP_DONT_CARE
 		depthInfo.cycle            = true
 """
-func_resize_projection = """
+
+[condition.-depth]
+depth_info_ref = "nil"
+
+[condition.projection]
+swift_import_simd = "import simd\n"
+lesson_func_resize = """
+
+	var projection: simd_float4x4 = .identity
+
 	mutating func resize(size: Size<Int32>)
 	{
 		let aspect = Float(size.width) / Float(max(1, size.height))
 		self.projection = .perspective(fovy: 45, aspect: aspect, near: 0.1, far: 100)
 	}
 """
-func_keys = """
+
+[condition.key]
+lesson_func_key = """
+
 
 	mutating func key(ctx: inout NeHeContext, key: SDL_Keycode, down: Bool, repeat: Bool)
 	{
 		guard down && !`repeat` else { return }
-		switch (key)
+		switch key
 		{
 		default:
 			break
 		}
 	}"""
-
-[condition.projection]
-swift_import_simd = "import simd\n"

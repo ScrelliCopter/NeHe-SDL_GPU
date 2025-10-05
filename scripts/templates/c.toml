@@ -1,11 +1,11 @@
 source_dir = "src/c"
 file_extension = "c"
 global_field = "static $field_type $label;"
+
+[condition.depth]
 appconfig_depthfmt = "\n\t.createDepthFormat = $depth_format,"
-appconfig_key = ",\n\t.key = Lesson${lesson_num}_Key"
 depth_info_ref = "&depthInfo"
-null = "NULL"
-struct_depth = """
+lesson_struct_depth = """
 	const SDL_GPUDepthStencilTargetInfo depthInfo =
 	{
 		.texture = ctx->depthTexture,
@@ -17,7 +17,13 @@ struct_depth = """
 		.cycle = true
 	};
 """
-func_resize_projection = """
+
+[condition.-depth]
+depth_info_ref = "NULL"
+
+[condition.projection]
+lesson_func_resize = """
+
 static void Lesson${lesson_num}_Resize(NeHeContext* restrict ctx, int width, int height)
 {
 	(void)ctx;
@@ -28,7 +34,12 @@ static void Lesson${lesson_num}_Resize(NeHeContext* restrict ctx, int width, int
 	projection = Mtx_Perspective(45.0f, (float)width / (float)height, 0.1f, 100.0f);
 }
 """
-func_keys = """
+
+[condition.key]
+appconfig_resize = "Lesson${lesson_num}_Resize"
+appconfig_key = ",\n\t.key = Lesson${lesson_num}_Key"
+lesson_func_key = """
+
 static void Lesson${lesson_num}_Key(NeHeContext* ctx, SDL_Keycode key, bool down, bool repeat)
 {
 	(void)ctx;
@@ -43,3 +54,6 @@ static void Lesson${lesson_num}_Key(NeHeContext* ctx, SDL_Keycode key, bool down
 	}
 }
 """
+
+[condition.-key]
+appconfig_resize = "NULL"
