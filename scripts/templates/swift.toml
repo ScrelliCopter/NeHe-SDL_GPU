@@ -35,3 +35,6 @@ func_keys = """
 			break
 		}
 	}"""
+
+[condition.projection]
+swift_import_simd = "import simd\n"

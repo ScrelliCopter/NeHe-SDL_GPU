@@ -100,6 +100,7 @@ class SourceGenerator:
 		self.source_dir = lang_toml["source_dir"]
 		self.file_extension = lang_toml["file_extension"]
 		self.swift_subdir = lang_toml.get("swift_subdir", False)
+		self.conditions = lang_toml["condition"]
 		self._globals = lang_toml.get("globals", "\n$fields\n\n")
 		self._global_field = lang_toml["global_field"]
 		self._empty_globals_semicolon = ";" if lang_toml.get("empty_globals_semicolon", False) else ""
@@ -183,6 +184,12 @@ class SourceGenerator:
 		return "\n" + Template(func_str).substitute({"lesson_num": f"{lesson_num}"})
 
 	def template_mapping(self, o: Options) -> dict[str, str]:
+		def macros_from_condition(cond: bool, name: str) -> dict[str, str]:
+			on = self.conditions.get(name, {})
+			off = self.conditions.get(f"-{name}", {})
+			return dict((macro, on.get(macro, "") if cond else off.get(macro, ""))
+				for macro in on.keys() | off.keys())
+
 		return {
 			"copyright_text": f"(C) {o.copyright_year} a dinosaur",
 			"copyright_license": "Zlib",
@@ -196,10 +203,9 @@ class SourceGenerator:
 			"appconfig_depthfmt": "" if o.depthfmt_suffix is None else Template(self._appconfig_depthfmt).substitute({'depth_format': f'SDL_GPU_TEXTUREFORMAT_{o.depthfmt_suffix}'}),
 			"appconfig_resize": f"Lesson{o.lesson_num}_Resize" if o.projection else "NULL",
 			"appconfig_key": f",\n\t{'\t\n'.join(self.initialiser_field('key', f'Lesson{o.lesson_num}_Key', True))}" if o.key else "",
-			"rust_import_keycode": "\nuse sdl3_sys::keycode::SDL_Keycode;" if o.key else "",
-			"rust_import_mtx": "\nuse nehe::matrix::Mtx;" if o.projection else "",
-			"rust_import_max": "\nuse std::cmp::max;" if o.projection else "",
-			"swift_import_simd": "import simd\n" if o.projection else "",
+			**macros_from_condition(o.projection, "projection"),
+			**macros_from_condition(o.key, "key"),
+			**macros_from_condition(bool(o.depthfmt_suffix), "depth_format"),
 		}
 
 

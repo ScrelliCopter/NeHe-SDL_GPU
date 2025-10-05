@@ -32,3 +32,10 @@ func_keys = """
 			_ => ()
 		}
 	}"""
+
+[condition.key]
+rust_import_keycode = "\nuse sdl3_sys::keycode::SDL_Keycode;"
+
+[condition.projection]
+rust_import_mtx = "\nuse nehe::matrix::Mtx;"
+rust_import_max = "\nuse std::cmp::max;"
