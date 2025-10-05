@@ -2,7 +2,10 @@ source_dir = "src/rust"
 file_extension = "rs"
 globals = "\n{\n$fields\n}"
 global_field = "\t$label: $field_type,"
+empty_globals_semicolon = true
 appconfig_depthfmt = "\tconst CREATE_DEPTH_BUFFER: SDL_GPUTextureFormat = $depth_format;\n"
+depth_info_ref = "&depth_info"
+null = "null()"
 struct_depth = """
 		let mut depth_info = SDL_GPUDepthStencilTargetInfo::default();
 		depth_info.texture          = ctx.depth_texture;

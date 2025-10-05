@@ -19,19 +19,7 @@ impl AppImplementation for Lesson${lesson_num}
 	const TITLE: &'static str = "$lesson_title";
 	const WIDTH: i32 = 640;
 	const HEIGHT: i32 = 480;
-$appconfig_depthfmt
-	fn init(&mut self, ctx: &NeHeContext) -> Result<(), NeHeError>
-	{
-		
-
-		Ok(())
-	}
-
-	fn quit(&mut self, ctx: &NeHeContext)
-	{
-		
-	}
-$lesson_func_resize
+$appconfig_depthfmt$lesson_func_resize
 	fn draw(&mut self, _ctx: &NeHeContext, cmd: *mut SDL_GPUCommandBuffer, swapchain: *mut SDL_GPUTexture)
 	{
 		let mut color_info = SDL_GPUColorTargetInfo::default();
@@ -43,9 +31,6 @@ $lesson_struct_depth
 		unsafe
 		{
 			let pass = SDL_BeginGPURenderPass(cmd, &color_info, 1, $lesson_pass_depth);
-
-			
-
 			SDL_EndGPURenderPass(pass);
 		}
 	}$lesson_func_key

@@ -98,7 +98,10 @@ class SourceGenerator:
 		self.file_extension = lang_toml["file_extension"]
 		self._globals = lang_toml.get("globals", "\n$fields\n\n")
 		self._global_field = lang_toml["global_field"]
+		self._empty_globals_semicolon = ";" if lang_toml.get("empty_globals_semicolon", False) else ""
 		self._appconfig_depthfmt = lang_toml["appconfig_depthfmt"]
+		self._depth_info_ref = lang_toml["depth_info_ref"]
+		self._null = lang_toml["null"]
 		self._struct_depth = lang_toml["struct_depth"]
 		self.func_resize_projection = lang_toml["func_resize_projection"]
 		self.func_keys = lang_toml["func_keys"]
@@ -180,15 +183,14 @@ class SourceGenerator:
 			"copyright_license": "Zlib",
 			"lesson_num": f"{o.lesson_num}",
 			"lesson_title": self.sanitise_string(o.title),
-			"lesson_definitions": self.global_field("projection", "Mtx") if o.projection else "",
+			"lesson_definitions": self.global_field("projection", "Mtx") if o.projection else self._empty_globals_semicolon,
 			"lesson_struct_depth": "" if o.depthfmt_suffix is None else f"\n{self._struct_depth}",
-			"lesson_pass_depth": "NULL" if o.depthfmt_suffix is None else "&depthInfo",
+			"lesson_pass_depth": self._null if o.depthfmt_suffix is None else self._depth_info_ref,
 			"lesson_func_resize": self.func(self.func_resize_projection, o.lesson_num) if o.projection else "",
 			"lesson_func_key": self.func(self.func_keys, o.lesson_num) if o.key else "",
 			"appconfig_depthfmt": "" if o.depthfmt_suffix is None else Template(self._appconfig_depthfmt).substitute({'depth_format': f'SDL_GPU_TEXTUREFORMAT_{o.depthfmt_suffix}'}),
 			"appconfig_resize": f"Lesson{o.lesson_num}_Resize" if o.projection else "NULL",
 			"appconfig_key": f",\n\t{'\t\n'.join(self.initialiser_field('key', f'Lesson{o.lesson_num}_Key', True))}" if o.key else "",
-			"rust_definition_comma": "" if o.projection else ";",
 		}
 
 

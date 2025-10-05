@@ -3,6 +3,8 @@ file_extension = "c"
 global_field = "static $field_type $label;"
 appconfig_depthfmt = "\n\t.createDepthFormat = $depth_format,"
 appconfig_key = ",\n\t.key = Lesson${lesson_num}_Key"
+depth_info_ref = "&depthInfo"
+null = "NULL"
 struct_depth = """
 	const SDL_GPUDepthStencilTargetInfo depthInfo =
 	{
