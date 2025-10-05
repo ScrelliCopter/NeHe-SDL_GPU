@@ -30,6 +30,7 @@ class Options:
 		g.add_argument("--lesson7", action="store_true")
 		l = p.add_mutually_exclusive_group()
 		l.add_argument("--c", action="store_true")
+		l.add_argument("--rust", action="store_true")
 		a = p.parse_args()
 
 		from datetime import datetime
@@ -48,7 +49,10 @@ class Options:
 			self.template_name = "lesson7"
 		else:
 			self.template_name = "default"
-		self.lang = "c"
+		if a.rust:
+			self.lang = "rust"
+		else:
+			self.lang = "c"
 
 
 class Value:
@@ -90,8 +94,12 @@ class SourceGenerator:
 		with template_dir.joinpath(f"{lang_name}.toml").open("rb") as f:
 			lang_toml = tomllib.load(f)
 
+		self.source_dir = lang_toml["source_dir"]
 		self.file_extension = lang_toml["file_extension"]
+		self._globals = lang_toml.get("globals", "\n$fields\n\n")
 		self._global_field = lang_toml["global_field"]
+		self._appconfig_depthfmt = lang_toml["appconfig_depthfmt"]
+		self._struct_depth = lang_toml["struct_depth"]
 		self.func_resize_projection = lang_toml["func_resize_projection"]
 		self.func_keys = lang_toml["func_keys"]
 
@@ -111,7 +119,9 @@ class SourceGenerator:
 		return "".join(cstr_chr(c) for c in s)
 
 	def global_field(self, label: str, field_type: str, /) -> str:
-		return Template(self._global_field).substitute({"label": label, "field_type": field_type})
+		return Template(self._globals).substitute({
+			"fields": Template(self._global_field).substitute({"label": label, "field_type": field_type}),
+		})
 
 	def initialiser_field(self, key, value, /, last: bool = False) -> Iterable[str]:
 		if isinstance(value, Value):
@@ -170,14 +180,15 @@ class SourceGenerator:
 			"copyright_license": "Zlib",
 			"lesson_num": f"{o.lesson_num}",
 			"lesson_title": self.sanitise_string(o.title),
-			"lesson_definitions": f"\n{self.global_field("projection", "Mtx")}\n\n" if o.projection else "",
-			"lesson_struct_depth": "" if o.depthfmt_suffix is None else f"\n\t{'\n\t'.join(self.local_struct('depthInfo', 'SDL_GPUDepthStencilTargetInfo', self.depth_info))}\n",
+			"lesson_definitions": self.global_field("projection", "Mtx") if o.projection else "",
+			"lesson_struct_depth": "" if o.depthfmt_suffix is None else f"\n{self._struct_depth}",
 			"lesson_pass_depth": "NULL" if o.depthfmt_suffix is None else "&depthInfo",
 			"lesson_func_resize": self.func(self.func_resize_projection, o.lesson_num) if o.projection else "",
 			"lesson_func_key": self.func(self.func_keys, o.lesson_num) if o.key else "",
-			"appconfig_depthfmt": "" if o.depthfmt_suffix is None else f"\n\t{'\t\n'.join(self.initialiser_field('createDepthFormat', f'SDL_GPU_TEXTUREFORMAT_{o.depthfmt_suffix}'))}",
+			"appconfig_depthfmt": "" if o.depthfmt_suffix is None else Template(self._appconfig_depthfmt).substitute({'depth_format': f'SDL_GPU_TEXTUREFORMAT_{o.depthfmt_suffix}'}),
 			"appconfig_resize": f"Lesson{o.lesson_num}_Resize" if o.projection else "NULL",
-			"appconfig_key": f",\n\t{'\t\n'.join(self.initialiser_field('key', f'Lesson{o.lesson_num}_Key', True))}" if o.key else ""
+			"appconfig_key": f",\n\t{'\t\n'.join(self.initialiser_field('key', f'Lesson{o.lesson_num}_Key', True))}" if o.key else "",
+			"rust_definition_comma": "" if o.projection else ";",
 		}
 
 
@@ -187,18 +198,18 @@ def main():
 	import sys
 	basedir = Path(sys.argv[0]).resolve().parent
 	template_dir = basedir.joinpath("templates")
-	c_dest_dir = Path("src/c")
-
-	root = basedir.parent
-	root.joinpath(c_dest_dir).mkdir(parents=True, exist_ok=True)
 
 	source_gen = SourceGenerator(o.lang, template_dir)
-	template_filename = f"{o.template_name}.{source_gen.file_extension}.txt"
+	dest_dir = Path(source_gen.source_dir)
+	root = basedir.parent
+	root.joinpath(dest_dir).mkdir(parents=True, exist_ok=True)
+
+	template_filename = f"{o.template_name}.{o.lang}.txt"
 	output_filename = f"lesson{o.lesson_num:02d}.{source_gen.file_extension}"
 
 	with template_dir.joinpath(template_filename).open("r") as src:
 		t = Template(src.read())
-	with root.joinpath(c_dest_dir, output_filename).open("w") as out:
+	with root.joinpath(dest_dir, output_filename).open("w") as out:
 		out.write(t.substitute(source_gen.template_mapping(o)))
 
 

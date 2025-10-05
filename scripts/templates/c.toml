@@ -1,5 +1,20 @@
+source_dir = "src/c"
 file_extension = "c"
 global_field = "static $field_type $label;"
+appconfig_depthfmt = "\n\t.createDepthFormat = $depth_format,"
+appconfig_key = ",\n\t.key = Lesson${lesson_num}_Key"
+struct_depth = """
+	const SDL_GPUDepthStencilTargetInfo depthInfo =
+	{
+		.texture = ctx->depthTexture,
+		.clear_depth = 1.0f,  // Ensure depth buffer clears to furthest value
+		.load_op = SDL_GPU_LOADOP_CLEAR,
+		.store_op = SDL_GPU_STOREOP_DONT_CARE,
+		.stencil_load_op = SDL_GPU_LOADOP_DONT_CARE,
+		.stencil_store_op = SDL_GPU_STOREOP_DONT_CARE,
+		.cycle = true
+	};
+"""
 func_resize_projection = """
 static void Lesson${lesson_num}_Resize(NeHeContext* restrict ctx, int width, int height)
 {

@@ -1,0 +1,44 @@
+/*
+ * SPDX-FileCopyrightText: $copyright_text
+ * SPDX-License-Identifier: $copyright_license
+ */
+
+#[derive(Default)]
+struct Lesson${lesson_num}$lesson_definitions$rust_definition_comma
+
+impl AppImplementation for Lesson${lesson_num}
+{
+	const TITLE: &'static str = "$lesson_title";
+	const WIDTH: i32 = 640;
+	const HEIGHT: i32 = 480;
+$appconfig_depthfmt
+	fn init(&mut self, ctx: &NeHeContext) -> Result<(), NeHeError>
+	{
+		
+
+		Ok(())
+	}
+
+	fn quit(&mut self, ctx: &NeHeContext)
+	{
+		
+	}
+$lesson_func_resize
+	fn draw(&mut self, _ctx: &NeHeContext, cmd: *mut SDL_GPUCommandBuffer, swapchain: *mut SDL_GPUTexture)
+	{
+		let mut color_info = SDL_GPUColorTargetInfo::default();
+		color_info.texture     = swapchain;
+		color_info.clear_color = SDL_FColor { r: 0.0, g: 0.0, b: 0.0, a: 0.5 };
+		color_info.load_op     = SDL_GPU_LOADOP_CLEAR;
+		color_info.store_op    = SDL_GPU_STOREOP_STORE;
+$lesson_struct_depth
+		unsafe
+		{
+			let pass = SDL_BeginGPURenderPass(cmd, &color_info, 1, $lesson_pass_depth);
+
+			
+
+			SDL_EndGPURenderPass(pass);
+		}
+	}$lesson_func_key
+}
