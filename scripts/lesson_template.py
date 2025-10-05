@@ -4,8 +4,51 @@ SPDX-FileCopyrightText: (C) 2025 a dinosaur
 SPDX-License-Identifier: Zlib
 """
 
+import tomllib
 from pathlib import Path
+from string import Template
 from typing import Iterable, List
+
+
+class Options:
+	depth_texfmt_suffixes = {
+		16: "D16_UNORM", 24: "D24_UNORM", 32: "D32_FLOAT",
+		248: "D24_UNORM_S8_UINT", 328: "D32_FLOAT_S8_UINT", 48: "D32_FLOAT_S8_UINT"
+	}
+
+	def __init__(self):
+		from argparse import ArgumentParser
+		p = ArgumentParser()
+		p.add_argument("num", type=int)
+		p.add_argument("--depth", type=int)
+		p.add_argument("--key", action="store_true")
+		p.add_argument("--projection", action="store_true")
+		p.add_argument("--title", default="")
+		g = p.add_mutually_exclusive_group()
+		g.add_argument("--lesson1", "--minimal", action="store_true")
+		g.add_argument("--lesson6", action="store_true")
+		g.add_argument("--lesson7", action="store_true")
+		l = p.add_mutually_exclusive_group()
+		l.add_argument("--c", action="store_true")
+		a = p.parse_args()
+
+		from datetime import datetime
+		self.copyright_year = datetime.now().year
+		self.lesson_num = a.num
+		depth = a.depth or (16 if a.lesson6 or a.lesson7 else None)
+		self.depthfmt_suffix = None if depth is None else f"{self.depth_texfmt_suffixes[depth]}"
+		self.key = a.key or a.lesson7
+		self.projection = a.projection or a.lesson6 or a.lesson7
+		self.title = a.title
+		if a.lesson1:
+			self.template_name = "lesson1"
+		elif a.lesson6:
+			self.template_name = "lesson6"
+		elif a.lesson7:
+			self.template_name = "lesson7"
+		else:
+			self.template_name = "default"
+		self.lang = "c"
 
 
 class Value:
@@ -32,10 +75,25 @@ class Array:
 		self.elements = elements
 
 
-class SourceGenC:
-	@staticmethod
-	def file_extension() -> str:
-		return "c"
+class SourceGenerator:
+	depth_info = {
+		"texture": "ctx->depthTexture",
+		"clear_depth": Value(1.0, comment="Ensure depth buffer clears to furthest value"),
+		"load_op": "SDL_GPU_LOADOP_CLEAR",
+		"store_op": "SDL_GPU_STOREOP_DONT_CARE",
+		"stencil_load_op": "SDL_GPU_LOADOP_DONT_CARE",
+		"stencil_store_op": "SDL_GPU_STOREOP_DONT_CARE",
+		"cycle": True
+	}
+
+	def __init__(self, lang_name: str, template_dir: Path):
+		with template_dir.joinpath(f"{lang_name}.toml").open("rb") as f:
+			lang_toml = tomllib.load(f)
+
+		self.file_extension = lang_toml["file_extension"]
+		self._global_field = lang_toml["global_field"]
+		self.func_resize_projection = lang_toml["func_resize_projection"]
+		self.func_keys = lang_toml["func_keys"]
 
 	@staticmethod
 	def sanitise_string(s: str, /) -> str:
@@ -52,9 +110,8 @@ class SourceGenC:
 				return f"\\U{i:08X}"
 		return "".join(cstr_chr(c) for c in s)
 
-	@staticmethod
-	def global_field(label: str, field_type: str, /) -> str:
-		return f"static {field_type} {label};"
+	def global_field(self, label: str, field_type: str, /) -> str:
+		return Template(self._global_field).substitute({"label": label, "field_type": field_type})
 
 	def initialiser_field(self, key, value, /, last: bool = False) -> Iterable[str]:
 		if isinstance(value, Value):
@@ -104,121 +161,45 @@ class SourceGenC:
 		yield "};"
 
 	@staticmethod
-	def func_resize_projection(lesson_num: str, /) -> str:
-		return f"""
-static void Lesson{lesson_num}_Resize(NeHeContext* restrict ctx, int width, int height)
-{{
-	(void)ctx;
+	def func(func_str: str, lesson_num: int) -> str:
+		return "\n" + Template(func_str).substitute({"lesson_num": f"{lesson_num}"})
 
-	// Avoid division by zero by clamping height
-	height = SDL_max(height, 1);
-	// Recalculate projection matrix
-	projection = Mtx_Perspective(45.0f, (float)width / (float)height, 0.1f, 100.0f);
-}}
-"""
-
-	@staticmethod
-	def func_keys(lesson_num: str, /) -> str:
-		return f"""
-static void Lesson{lesson_num}_Key(NeHeContext* ctx, SDL_Keycode key, bool down, bool repeat)
-{{
-	(void)ctx;
-
-	if (down && !repeat)
-	{{
-		switch (key)
-		{{
-		default:
-			break;
-		}}
-	}}
-}}
-"""
-
-
-class Options:
-	depth_texfmt_suffixes = {
-		16: "D16_UNORM", 24: "D24_UNORM", 32: "D32_FLOAT",
-		248: "D24_UNORM_S8_UINT", 328: "D32_FLOAT_S8_UINT", 48: "D32_FLOAT_S8_UINT"
-	}
-
-	depth_info = {
-		"texture": "ctx->depthTexture",
-		"clear_depth": Value(1.0, comment="Ensure depth buffer clears to furthest value"),
-		"load_op": "SDL_GPU_LOADOP_CLEAR",
-		"store_op": "SDL_GPU_STOREOP_DONT_CARE",
-		"stencil_load_op": "SDL_GPU_LOADOP_DONT_CARE",
-		"stencil_store_op": "SDL_GPU_STOREOP_DONT_CARE",
-		"cycle": True
-	}
-
-	def __init__(self):
-		from argparse import ArgumentParser
-		p = ArgumentParser()
-		p.add_argument("num", type=int)
-		p.add_argument("--depth", type=int)
-		p.add_argument("--key", action="store_true")
-		p.add_argument("--projection", action="store_true")
-		p.add_argument("--title", default="")
-		g = p.add_mutually_exclusive_group()
-		g.add_argument("--lesson1", "--minimal", action="store_true")
-		g.add_argument("--lesson6", action="store_true")
-		g.add_argument("--lesson7", action="store_true")
-		a = p.parse_args()
-
-		from datetime import datetime
-		self.copyright_year = datetime.now().year
-		self.lesson_num = a.num
-		depth = a.depth or (16 if a.lesson6 or a.lesson7 else None)
-		self.depthfmt_suffix = None if depth is None else f"{self.depth_texfmt_suffixes[depth]}"
-		self.key = a.key or a.lesson7
-		self.projection = a.projection or a.lesson6 or a.lesson7
-		self.title = a.title
-		if a.lesson1:
-			self.template_name = "lesson1"
-		elif a.lesson6:
-			self.template_name = "lesson6"
-		elif a.lesson7:
-			self.template_name = "lesson7"
-		else:
-			self.template_name = "default"
-
-	def template_mapping(self, gen: SourceGenC) -> dict[str, str]:
+	def template_mapping(self, o: Options) -> dict[str, str]:
 		return {
-			"copyright_text": f"(C) {self.copyright_year} a dinosaur",
+			"copyright_text": f"(C) {o.copyright_year} a dinosaur",
 			"copyright_license": "Zlib",
-			"lesson_num": f"{self.lesson_num}",
-			"lesson_title": gen.sanitise_string(self.title),
-			"lesson_definitions": f"\n{gen.global_field("projection", "Mtx")}\n\n" if self.projection else "",
-			"lesson_struct_depth": "" if self.depthfmt_suffix is None else f"\n\t{'\n\t'.join(gen.local_struct('depthInfo', 'SDL_GPUDepthStencilTargetInfo', self.depth_info))}\n",
-			"lesson_pass_depth": "NULL" if self.depthfmt_suffix is None else "&depthInfo",
-			"lesson_func_resize": gen.func_resize_projection(self.lesson_num) if self.projection else "",
-			"lesson_func_key": gen.func_keys(self.lesson_num) if self.key else "",
-			"appconfig_depthfmt": "" if self.depthfmt_suffix is None else f"\n\t{'\t\n'.join(gen.initialiser_field('createDepthFormat', f'SDL_GPU_TEXTUREFORMAT_{self.depthfmt_suffix}'))}",
-			"appconfig_resize": f"Lesson{self.lesson_num}_Resize" if self.projection else "NULL",
-			"appconfig_key": f",\n\t{'\t\n'.join(gen.initialiser_field('key', f'Lesson{self.lesson_num}_Key', True))}" if self.key else ""
+			"lesson_num": f"{o.lesson_num}",
+			"lesson_title": self.sanitise_string(o.title),
+			"lesson_definitions": f"\n{self.global_field("projection", "Mtx")}\n\n" if o.projection else "",
+			"lesson_struct_depth": "" if o.depthfmt_suffix is None else f"\n\t{'\n\t'.join(self.local_struct('depthInfo', 'SDL_GPUDepthStencilTargetInfo', self.depth_info))}\n",
+			"lesson_pass_depth": "NULL" if o.depthfmt_suffix is None else "&depthInfo",
+			"lesson_func_resize": self.func(self.func_resize_projection, o.lesson_num) if o.projection else "",
+			"lesson_func_key": self.func(self.func_keys, o.lesson_num) if o.key else "",
+			"appconfig_depthfmt": "" if o.depthfmt_suffix is None else f"\n\t{'\t\n'.join(self.initialiser_field('createDepthFormat', f'SDL_GPU_TEXTUREFORMAT_{o.depthfmt_suffix}'))}",
+			"appconfig_resize": f"Lesson{o.lesson_num}_Resize" if o.projection else "NULL",
+			"appconfig_key": f",\n\t{'\t\n'.join(self.initialiser_field('key', f'Lesson{o.lesson_num}_Key', True))}" if o.key else ""
 		}
 
 
 def main():
 	o = Options()
-	c_dest_dir = Path("src/c")
 
 	import sys
 	basedir = Path(sys.argv[0]).resolve().parent
+	template_dir = basedir.joinpath("templates")
+	c_dest_dir = Path("src/c")
+
 	root = basedir.parent
 	root.joinpath(c_dest_dir).mkdir(parents=True, exist_ok=True)
 
-	source_gen = SourceGenC()
+	source_gen = SourceGenerator(o.lang, template_dir)
+	template_filename = f"{o.template_name}.{source_gen.file_extension}.txt"
+	output_filename = f"lesson{o.lesson_num:02d}.{source_gen.file_extension}"
 
-	template_filename = f"{o.template_name}.{source_gen.file_extension()}.txt"
-	output_filename = f"lesson{o.lesson_num:02d}.{source_gen.file_extension()}"
-
-	from string import Template
-	with basedir.joinpath("templates", template_filename).open("r") as src:
+	with template_dir.joinpath(template_filename).open("r") as src:
 		t = Template(src.read())
 	with root.joinpath(c_dest_dir, output_filename).open("w") as out:
-		out.write(t.substitute(o.template_mapping(source_gen)))
+		out.write(t.substitute(source_gen.template_mapping(o)))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,28 @@
+file_extension = "c"
+global_field = "static $field_type $label;"
+func_resize_projection = """
+static void Lesson${lesson_num}_Resize(NeHeContext* restrict ctx, int width, int height)
+{
+	(void)ctx;
+
+	// Avoid division by zero by clamping height
+	height = SDL_max(height, 1);
+	// Recalculate projection matrix
+	projection = Mtx_Perspective(45.0f, (float)width / (float)height, 0.1f, 100.0f);
+}
+"""
+func_keys = """
+static void Lesson${lesson_num}_Key(NeHeContext* ctx, SDL_Keycode key, bool down, bool repeat)
+{
+	(void)ctx;
+
+	if (down && !repeat)
+	{
+		switch (key)
+		{
+		default:
+			break;
+		}
+	}
+}
+"""
