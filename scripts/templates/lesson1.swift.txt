@@ -1,0 +1,32 @@
+/*
+ * SPDX-FileCopyrightText: $copyright_text
+ * SPDX-License-Identifier: $copyright_license
+ */
+
+import SDLSwift
+import NeHe
+$swift_import_simd
+struct Lesson$lesson_num: AppDelegate
+{$lesson_definitions$lesson_func_resize
+	func draw(ctx: inout NeHeContext, cmd: OpaquePointer,
+		swapchain: OpaquePointer, swapchainSize: Size<UInt32>) throws(NeHeError)
+	{
+		var colorInfo = SDL_GPUColorTargetInfo()
+		colorInfo.texture     = swapchain
+		colorInfo.clear_color = SDL_FColor(r: 0.0, g: 0.0, b: 0.0, a: 0.5)
+		colorInfo.load_op     = SDL_GPU_LOADOP_CLEAR
+		colorInfo.store_op    = SDL_GPU_STOREOP_STORE
+$lesson_struct_depth
+		let pass = SDL_BeginGPURenderPass(cmd, &colorInfo, 1, $lesson_pass_depth)
+		SDL_EndGPURenderPass(pass)
+	}$lesson_func_key
+}
+
+@main struct Program: AppRunner
+{
+	typealias Delegate = Lesson$lesson_num
+	static let config = AppConfig(
+		title: "$lesson_title",
+		width: 640,
+		height: 480$appconfig_depthfmt)
+}

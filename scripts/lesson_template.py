@@ -31,6 +31,7 @@ class Options:
 		l = p.add_mutually_exclusive_group()
 		l.add_argument("--c", action="store_true")
 		l.add_argument("--rust", action="store_true")
+		l.add_argument("--swift", action="store_true")
 		a = p.parse_args()
 
 		from datetime import datetime
@@ -51,6 +52,8 @@ class Options:
 			self.template_name = "default"
 		if a.rust:
 			self.lang = "rust"
+		elif a.swift:
+			self.lang = "swift"
 		else:
 			self.lang = "c"
 
@@ -96,12 +99,14 @@ class SourceGenerator:
 
 		self.source_dir = lang_toml["source_dir"]
 		self.file_extension = lang_toml["file_extension"]
+		self.swift_subdir = lang_toml.get("swift_subdir", False)
 		self._globals = lang_toml.get("globals", "\n$fields\n\n")
 		self._global_field = lang_toml["global_field"]
 		self._empty_globals_semicolon = ";" if lang_toml.get("empty_globals_semicolon", False) else ""
 		self._appconfig_depthfmt = lang_toml["appconfig_depthfmt"]
 		self._depth_info_ref = lang_toml["depth_info_ref"]
 		self._null = lang_toml["null"]
+		self._matrix_type = lang_toml.get("matrix_type", "Mtx")
 		self._struct_depth = lang_toml["struct_depth"]
 		self.func_resize_projection = lang_toml["func_resize_projection"]
 		self.func_keys = lang_toml["func_keys"]
@@ -183,7 +188,7 @@ class SourceGenerator:
 			"copyright_license": "Zlib",
 			"lesson_num": f"{o.lesson_num}",
 			"lesson_title": self.sanitise_string(o.title),
-			"lesson_definitions": self.global_field("projection", "Mtx") if o.projection else self._empty_globals_semicolon,
+			"lesson_definitions": self.global_field("projection", self._matrix_type) if o.projection else self._empty_globals_semicolon,
 			"lesson_struct_depth": "" if o.depthfmt_suffix is None else f"\n{self._struct_depth}",
 			"lesson_pass_depth": self._null if o.depthfmt_suffix is None else self._depth_info_ref,
 			"lesson_func_resize": self.func(self.func_resize_projection, o.lesson_num) if o.projection else "",
@@ -194,6 +199,7 @@ class SourceGenerator:
 			"rust_import_keycode": "\nuse sdl3_sys::keycode::SDL_Keycode;" if o.key else "",
 			"rust_import_mtx": "\nuse nehe::matrix::Mtx;" if o.projection else "",
 			"rust_import_max": "\nuse std::cmp::max;" if o.projection else "",
+			"swift_import_simd": "import simd\n" if o.projection else "",
 		}
 
 
@@ -206,11 +212,16 @@ def main():
 
 	source_gen = SourceGenerator(o.lang, template_dir)
 	dest_dir = Path(source_gen.source_dir)
+	if source_gen.swift_subdir:
+		dest_dir = dest_dir / f"Lesson{o.lesson_num:02d}"
 	root = basedir.parent
 	root.joinpath(dest_dir).mkdir(parents=True, exist_ok=True)
 
 	template_filename = f"{o.template_name}.{o.lang}.txt"
-	output_filename = f"lesson{o.lesson_num:02d}.{source_gen.file_extension}"
+	if source_gen.swift_subdir:
+		output_filename = f"lesson{o.lesson_num}.{source_gen.file_extension}"
+	else:
+		output_filename = f"lesson{o.lesson_num:02d}.{source_gen.file_extension}"
 
 	with template_dir.joinpath(template_filename).open("r") as src:
 		t = Template(src.read())
