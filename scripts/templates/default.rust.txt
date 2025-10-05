@@ -6,10 +6,11 @@
 use nehe::application::config::AppImplementation;
 use nehe::application::run;
 use nehe::context::NeHeContext;
-use sdl3_sys::gpu::*;
-use sdl3_sys::pixels::SDL_FColor;
+use nehe::error::NeHeError;$rust_import_mtx
+use sdl3_sys::gpu::*;$rust_import_keycode
+use sdl3_sys::pixels::SDL_FColor;$rust_import_max
 use std::process::ExitCode;
-use std::ptr::null_mut;
+use std::ptr::null;
 
 #[derive(Default)]
 struct Lesson${lesson_num}$lesson_definitions

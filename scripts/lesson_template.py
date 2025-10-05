@@ -191,6 +191,9 @@ class SourceGenerator:
 			"appconfig_depthfmt": "" if o.depthfmt_suffix is None else Template(self._appconfig_depthfmt).substitute({'depth_format': f'SDL_GPU_TEXTUREFORMAT_{o.depthfmt_suffix}'}),
 			"appconfig_resize": f"Lesson{o.lesson_num}_Resize" if o.projection else "NULL",
 			"appconfig_key": f",\n\t{'\t\n'.join(self.initialiser_field('key', f'Lesson{o.lesson_num}_Key', True))}" if o.key else "",
+			"rust_import_keycode": "\nuse sdl3_sys::keycode::SDL_Keycode;" if o.key else "",
+			"rust_import_mtx": "\nuse nehe::matrix::Mtx;" if o.projection else "",
+			"rust_import_max": "\nuse std::cmp::max;" if o.projection else "",
 		}
 
 
