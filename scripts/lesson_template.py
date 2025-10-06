@@ -68,26 +68,43 @@ class SourceGenerator:
 		self.conditions = lang_toml["condition"]
 
 	@staticmethod
-	def sanitise_string(s: str, /) -> str:
-		def cstr_chr(c: str) -> str:
+	def sanitise_string(s: str, lang: str = "c", /) -> str:
+		def cstr_chr(c: str, /) -> str:
 			if m := {
 					"\a": "\\a", "\b": "\\b", "\f": "\\f", "\n": "\\n", "\r": "\\r",
 					"\t": "\\t", "\v": "\\v", "\\": "\\\\", "\"": "\\\"" }.get(c):
 				return m
-			elif (i := ord(c)) < 0x7F:
-				return c if c.isprintable() else f"\\x{i:0X2}"
+			elif (i := ord(c)) < 0x80:
+				return c if c.isprintable() else f"\\x{i:02X}"
 			elif i < 0x10000:
 				return f"\\u{i:04X}"
 			else:
 				return f"\\U{i:08X}"
-		return "".join(cstr_chr(c) for c in s)
+		def rstr_chr(c: str, /) -> str:
+			if m := { "\0": "\\0", "\n": "\\n", "\r": "\\r", "\t": "\\t", "\\": "\\\\", "\"": "\\\"" }.get(c):
+				return m
+			elif (i := ord(c)) < 0x80:
+				return c if c.isprintable() else f"\\x{i:02X}"
+			else:
+				return f"\\u{{{i:X}}}"
+		def sstr_chr(c: str, /) -> str:
+			if m := { "\0": "\\0", "\\": "\\\\", "\t": "\\t", "\n": "\\n", "\r": "\\r", "\"": "\\\"" }.get(c):
+				return m
+			else:
+				return c if (i := ord(c)) < 0x80 and c.isprintable() else f"\\u{{{i:X}}}"
+		if lang == "swift":
+			return "".join(sstr_chr(c) for c in s)
+		elif lang == "rust":
+			return "".join(rstr_chr(c) for c in s)
+		else:
+			return "".join(cstr_chr(c) for c in s)
 
 	def template_mapping(self, o: Options, /) -> dict[str, str]:
 		builtins = {
 			"copyright_text": f"(C) {o.copyright_year} a dinosaur",
 			"copyright_license": "Zlib",
 			"lesson_num": f"{o.lesson_num}",
-			"lesson_title": self.sanitise_string(o.title),
+			"lesson_title": self.sanitise_string(o.title, o.lang),
 			"depth_format": f"SDL_GPU_TEXTUREFORMAT_{o.depthfmt_suffix}" if o.depthfmt_suffix else "",
 		}
 
