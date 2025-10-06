@@ -1,9 +1,6 @@
 source_dir = "src/swift"
 file_extension = "swift"
 swift_subdir = true
-globals = "\n$fields\n"
-global_field = "\tvar $label: $field_type"
-matrix_type = "simd_float4x4"
 
 [condition.depth]
 appconfig_depthfmt = ",\n\t\tcreateDepthBuffer: $depth_format"
@@ -24,10 +21,12 @@ depth_info_ref = "nil"
 
 [condition.projection]
 swift_import_simd = "import simd\n"
-lesson_func_resize = """
+lesson_definitions = """
 
 	var projection: simd_float4x4 = .identity
 
+"""
+lesson_func_resize = """
 	mutating func resize(size: Size<Int32>)
 	{
 		let aspect = Float(size.width) / Float(max(1, size.height))

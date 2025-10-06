@@ -1,6 +1,5 @@
 source_dir = "src/c"
 file_extension = "c"
-global_field = "static $field_type $label;"
 
 [condition.depth]
 appconfig_depthfmt = "\n\t.createDepthFormat = $depth_format,"
@@ -22,6 +21,11 @@ lesson_struct_depth = """
 depth_info_ref = "NULL"
 
 [condition.projection]
+lesson_definitions = """
+
+static Mtx projection;
+
+"""
 lesson_func_resize = """
 
 static void Lesson${lesson_num}_Resize(NeHeContext* restrict ctx, int width, int height)

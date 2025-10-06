@@ -101,10 +101,6 @@ class SourceGenerator:
 		self.file_extension = lang_toml["file_extension"]
 		self.swift_subdir = lang_toml.get("swift_subdir", False)
 		self.conditions = lang_toml["condition"]
-		self._globals = lang_toml.get("globals", "\n$fields\n\n")
-		self._global_field = lang_toml["global_field"]
-		self._empty_globals_semicolon = ";" if lang_toml.get("empty_globals_semicolon", False) else ""
-		self._matrix_type = lang_toml.get("matrix_type", "Mtx")
 
 	@staticmethod
 	def sanitise_string(s: str, /) -> str:
@@ -120,11 +116,6 @@ class SourceGenerator:
 			else:
 				return f"\\U{i:08X}"
 		return "".join(cstr_chr(c) for c in s)
-
-	def global_field(self, label: str, field_type: str, /) -> str:
-		return Template(self._globals).substitute({
-			"fields": Template(self._global_field).substitute({"label": label, "field_type": field_type}),
-		})
 
 	def initialiser_field(self, key, value, /, last: bool = False) -> Iterable[str]:
 		if isinstance(value, Value):
@@ -174,19 +165,23 @@ class SourceGenerator:
 		yield "};"
 
 	def template_mapping(self, o: Options) -> dict[str, str]:
-		def macros_from_condition(cond: bool, name: str) -> dict[str, str]:
-			on = self.conditions.get(name, {})
-			off = self.conditions.get(f"-{name}", {})
-			return dict((macro, on.get(macro, "") if cond else off.get(macro, ""))
-				for macro in on.keys() | off.keys())
-
-		return {
+		builtins = {
 			"copyright_text": f"(C) {o.copyright_year} a dinosaur",
 			"copyright_license": "Zlib",
 			"lesson_num": f"{o.lesson_num}",
 			"lesson_title": self.sanitise_string(o.title),
-			"lesson_definitions": self.global_field("projection", self._matrix_type) if o.projection else self._empty_globals_semicolon,
 			"depth_format": f"SDL_GPU_TEXTUREFORMAT_{o.depthfmt_suffix}" if o.depthfmt_suffix else "",
+		}
+
+		def macros_from_condition(cond: bool, name: str) -> dict[str, str]:
+			on = self.conditions.get(name, {})
+			off = self.conditions.get(f"-{name}", {})
+			return dict((macro, Template(on.get(macro, "") if cond else off.get(macro, ""))
+					.substitute(builtins))
+				for macro in on.keys() | off.keys())
+
+		return {
+			**builtins,
 			**macros_from_condition(o.projection, "projection"),
 			**macros_from_condition(o.key, "key"),
 			**macros_from_condition(bool(o.depthfmt_suffix), "depth"),
@@ -215,10 +210,8 @@ def main():
 
 	with template_dir.joinpath(template_filename).open("r") as src:
 		t = Template(src.read())
-	mapping = source_gen.template_mapping(o)
-	t = Template(t.substitute(mapping))  # HACK: double expand macros for now
 	with root.joinpath(dest_dir, output_filename).open("w") as out:
-		out.write(t.substitute(mapping))
+		out.write(t.substitute(source_gen.template_mapping(o)))
 
 
 if __name__ == "__main__":

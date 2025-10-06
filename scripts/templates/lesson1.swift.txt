@@ -7,7 +7,7 @@ import SDLSwift
 import NeHe
 $swift_import_simd
 struct Lesson$lesson_num: AppDelegate
-{$lesson_func_resize
+{$lesson_definitions$lesson_func_resize
 	func draw(ctx: inout NeHeContext, cmd: OpaquePointer,
 		swapchain: OpaquePointer, swapchainSize: Size<UInt32>) throws(NeHeError)
 	{
