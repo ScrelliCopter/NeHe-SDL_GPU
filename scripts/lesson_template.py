@@ -7,7 +7,6 @@ SPDX-License-Identifier: Zlib
 import tomllib
 from pathlib import Path
 from string import Template
-from typing import Iterable, List
 
 
 class Options:
@@ -58,42 +57,8 @@ class Options:
 			self.lang = "c"
 
 
-class Value:
-	def __init__(self, value, /, comment: str|None = None):
-		self.value = value
-		self.comment = comment
-
-class SizeOf:
-	def __init__(self, struct: str):
-		self.struct = struct
-
-class ArraySizeOf:
-	def __init__(self, array: str):
-		self.array = array
-
-class OffsetOf:
-	def __init__(self, struct: str, field: str):
-		self.struct = struct
-		self.field = field
-
-class Array:
-	def __init__(self, elem_type: str, elements: List[dict]):
-		self.type = elem_type
-		self.elements = elements
-
-
 class SourceGenerator:
-	depth_info = {
-		"texture": "ctx->depthTexture",
-		"clear_depth": Value(1.0, comment="Ensure depth buffer clears to furthest value"),
-		"load_op": "SDL_GPU_LOADOP_CLEAR",
-		"store_op": "SDL_GPU_STOREOP_DONT_CARE",
-		"stencil_load_op": "SDL_GPU_LOADOP_DONT_CARE",
-		"stencil_store_op": "SDL_GPU_STOREOP_DONT_CARE",
-		"cycle": True
-	}
-
-	def __init__(self, lang_name: str, template_dir: Path):
+	def __init__(self, lang_name: str, template_dir: Path, /):
 		with template_dir.joinpath(f"{lang_name}.toml").open("rb") as f:
 			lang_toml = tomllib.load(f)
 
@@ -117,54 +82,7 @@ class SourceGenerator:
 				return f"\\U{i:08X}"
 		return "".join(cstr_chr(c) for c in s)
 
-	def initialiser_field(self, key, value, /, last: bool = False) -> Iterable[str]:
-		if isinstance(value, Value):
-			finalval = value
-		elif isinstance(value, SizeOf):
-			finalval = Value(f"sizeof({value.struct})")
-		elif isinstance(value, ArraySizeOf):
-			finalval = Value(f"SDL_arraysize({value.array})")
-		elif isinstance(value, OffsetOf):
-			finalval = Value(f"offsetof({value.struct}, {value.field})")
-		elif isinstance(value, Array):
-			yield f".{key} = &(const {value.type})"
-			yield "{"
-			if len(value.elements) == 1:
-				for line in self.initialiser_fields(value.elements[0]):
-					yield line
-			yield "}" if last else "},"
-			return
-		elif isinstance(value, dict):
-			yield f".{key} ="
-			yield "{"
-			for line in self.initialiser_fields(value):
-				yield line
-			yield "}" if last else "},"
-			return
-		else:
-			finalval = Value(value)
-		if isinstance(finalval.value, bool):
-			strval = str(finalval.value).lower()
-		elif isinstance(finalval.value, float):
-			strval = f"{finalval.value}f"
-		else:
-			strval = str(finalval.value)
-		yield f".{key} = {strval}{'' if last else ','}{'  // ' + finalval.comment if finalval.comment else ''}"
-
-	def initialiser_fields(self, info: dict, /) -> Iterable[str]:
-		for i, (key, value) in enumerate(info.items()):
-			last = i == len(info) - 1
-			for line in self.initialiser_field(key, value, last):
-				yield "\t" + line
-
-	def local_struct(self, label: str, struct_type: str, fields: dict, /) -> Iterable[str]:
-		yield f"const {struct_type} {label} ="
-		yield "{"
-		for line in self.initialiser_fields(fields):
-			yield line
-		yield "};"
-
-	def template_mapping(self, o: Options) -> dict[str, str]:
+	def template_mapping(self, o: Options, /) -> dict[str, str]:
 		builtins = {
 			"copyright_text": f"(C) {o.copyright_year} a dinosaur",
 			"copyright_license": "Zlib",
@@ -173,7 +91,7 @@ class SourceGenerator:
 			"depth_format": f"SDL_GPU_TEXTUREFORMAT_{o.depthfmt_suffix}" if o.depthfmt_suffix else "",
 		}
 
-		def macros_from_condition(cond: bool, name: str) -> dict[str, str]:
+		def macros_from_condition(cond: bool, name: str, /) -> dict[str, str]:
 			on = self.conditions.get(name, {})
 			off = self.conditions.get(f"-{name}", {})
 			return dict((macro, Template(on.get(macro, "") if cond else off.get(macro, ""))
