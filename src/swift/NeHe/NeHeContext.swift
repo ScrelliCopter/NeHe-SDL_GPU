@@ -12,16 +12,17 @@ public struct NeHeContext
 	public var device: OpaquePointer
 	public var depthTexture: OpaquePointer?
 	public var depthTextureSize: Size<UInt32>
+	public let depthTextureFormat: SDL_GPUTextureFormat
 	public let bundle: Bundle?
 }
 
 internal extension NeHeContext
 {
-	init(title: StaticString, width: Int32, height: Int32, bundle: Bundle?) throws(NeHeError)
+	init(config: AppConfig) throws(NeHeError)
 	{
 		// Create window
 		let flags = SDL_WindowFlags(SDL_WINDOW_RESIZABLE) | SDL_WindowFlags(SDL_WINDOW_HIGH_PIXEL_DENSITY)
-		guard let window = SDL_CreateWindow(title.utf8Start, width, height, flags) else
+		guard let window = SDL_CreateWindow(config.title.utf8Start, config.width, config.height, flags) else
 		{
 			throw .sdlError("SDL_CreateWindow", String(cString: SDL_GetError()))
 		}
@@ -50,7 +51,8 @@ internal extension NeHeContext
 		self.device = device
 		self.depthTexture = nil
 		self.depthTextureSize = .zero
-		self.bundle = bundle
+		self.depthTextureFormat = config.manageDepthFormat
+		self.bundle = config.bundle
 	}
 }
 

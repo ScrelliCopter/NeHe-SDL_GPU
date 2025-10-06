@@ -152,7 +152,7 @@ struct Lesson7: AppDelegate
 		]
 		info.target_info.color_target_descriptions = colorTargets.withUnsafeBufferPointer(\.baseAddress!)
 		info.target_info.num_color_targets         = UInt32(colorTargets.count)
-		info.target_info.depth_stencil_format      = SDL_GPU_TEXTUREFORMAT_D16_UNORM
+		info.target_info.depth_stencil_format      = ctx.depthTextureFormat
 		info.target_info.has_depth_stencil_target  = true
 
 		// Create unlit pipeline

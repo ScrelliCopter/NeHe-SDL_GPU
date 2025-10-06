@@ -23,11 +23,7 @@ public extension AppRunner
 		defer { SDL_Quit() }
 
 		// Initialise GPU context
-		var ctx = try NeHeContext(
-			title: config.title,
-			width: config.width,
-			height: config.height,
-			bundle: config.bundle)
+		var ctx = try NeHeContext(config: Self.config)
 		defer
 		{
 			SDL_ReleaseWindowFromGPUDevice(ctx.device, ctx.window)
@@ -36,7 +32,7 @@ public extension AppRunner
 		}
 
 		// Handle depth buffer texture creation if requested
-		if config.manageDepthFormat != SDL_GPU_TEXTUREFORMAT_INVALID
+		if Self.config.manageDepthFormat != SDL_GPU_TEXTUREFORMAT_INVALID
 		{
 			var backbufWidth: Int32 = 0, backbufHeight: Int32 = 0
 			SDL_GetWindowSizeInPixels(ctx.window, &backbufWidth, &backbufHeight)
@@ -46,7 +42,7 @@ public extension AppRunner
 		}
 		defer
 		{
-			if config.manageDepthFormat != SDL_GPU_TEXTUREFORMAT_INVALID,
+			if Self.config.manageDepthFormat != SDL_GPU_TEXTUREFORMAT_INVALID,
 				let depthTexture = ctx.depthTexture
 			{
 				SDL_ReleaseGPUTexture(ctx.device, depthTexture)
@@ -114,7 +110,7 @@ public extension AppRunner
 
 			let swapchainSize = Size(width: UInt32(swapchainWidth), height: UInt32(swapchainHeight))
 
-			if config.manageDepthFormat != SDL_GPU_TEXTUREFORMAT_INVALID
+			if Self.config.manageDepthFormat != SDL_GPU_TEXTUREFORMAT_INVALID
 				&& ctx.depthTexture != nil
 				&& ctx.depthTextureSize != swapchainSize
 			{

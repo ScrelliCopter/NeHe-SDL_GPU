@@ -126,7 +126,7 @@ struct Lesson5: AppDelegate
 		var targetInfo = SDL_GPUGraphicsPipelineTargetInfo()
 		targetInfo.color_target_descriptions = colorTargets.withUnsafeBufferPointer(\.baseAddress!)
 		targetInfo.num_color_targets         = UInt32(colorTargets.count)
-		targetInfo.depth_stencil_format      = SDL_GPU_TEXTUREFORMAT_D16_UNORM
+		targetInfo.depth_stencil_format      = ctx.depthTextureFormat
 		targetInfo.has_depth_stencil_target  = true
 
 		var info = SDL_GPUGraphicsPipelineCreateInfo(
