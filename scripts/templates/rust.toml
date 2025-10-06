@@ -6,6 +6,7 @@ appconfig_depthfmt = "\tconst CREATE_DEPTH_BUFFER: SDL_GPUTextureFormat = $depth
 depth_info_ref = "&depth_info"
 lesson1_draw_ctx = "ctx"
 lesson_struct_depth = """
+
 		let mut depth_info = SDL_GPUDepthStencilTargetInfo::default();
 		depth_info.texture          = ctx.depth_texture;
 		depth_info.clear_depth      = 1.0;

@@ -32,7 +32,7 @@ $appconfig_depthfmt
 		
 	}
 $lesson_func_resize
-	fn draw(&mut self, _ctx: &NeHeContext, cmd: *mut SDL_GPUCommandBuffer, swapchain: *mut SDL_GPUTexture)
+	fn draw(&mut self, $lesson1_draw_ctx: &NeHeContext, cmd: *mut SDL_GPUCommandBuffer, swapchain: *mut SDL_GPUTexture)
 	{
 		let mut color_info = SDL_GPUColorTargetInfo::default();
 		color_info.texture     = swapchain;
