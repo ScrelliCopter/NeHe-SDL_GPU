@@ -91,12 +91,14 @@ class SourceGenerator:
 			"depth_format": f"SDL_GPU_TEXTUREFORMAT_{o.depthfmt_suffix}" if o.depthfmt_suffix else "",
 		}
 
-		def macros_from_condition(cond: bool, name: str, /) -> dict[str, str]:
-			on = self.conditions.get(name, {})
-			off = self.conditions.get(f"-{name}", {})
-			return dict((macro, Template(on.get(macro, "") if cond else off.get(macro, ""))
+		def macros_from_condition(condition: bool, name: str, /) -> dict[str, str]:
+			if not (condition_group := self.conditions.get(name, None)):
+				return {}
+			enabled = condition_group.get("enabled", {})
+			disabled = condition_group.get("disabled", {})
+			return dict((macro, Template(enabled.get(macro, "") if condition else disabled.get(macro, ""))
 					.substitute(builtins))
-				for macro in on.keys() | off.keys())
+				for macro in enabled.keys() | disabled.keys())
 
 		return {
 			**builtins,

@@ -1,7 +1,7 @@
 source_dir = "src/rust"
 file_extension = "rs"
 
-[condition.depth]
+[condition.depth.enabled]
 appconfig_depthfmt = "\tconst CREATE_DEPTH_BUFFER: SDL_GPUTextureFormat = $depth_format;\n"
 depth_info_ref = "&depth_info"
 lesson1_draw_ctx = "ctx"
@@ -17,12 +17,12 @@ lesson_struct_depth = """
 		depth_info.cycle            = true;
 """
 
-[condition.-depth]
+[condition.depth.disabled]
 rust_import_null = "\nuse std::ptr::null;"
 depth_info_ref = "null()"
 lesson1_draw_ctx = "_ctx"
 
-[condition.projection]
+[condition.projection.enabled]
 rust_import_mtx = "\nuse nehe::matrix::Mtx;"
 rust_import_max = "\nuse std::cmp::max;"
 lesson_definitions = """
@@ -40,10 +40,10 @@ lesson_func_resize = """
 	}
 """
 
-[condition.-projection]
+[condition.projection.disabled]
 lesson_definitions = ";"
 
-[condition.key]
+[condition.key.enabled]
 rust_import_keycode = "\nuse sdl3_sys::keycode::SDL_Keycode;"
 lesson_func_key = """
 

@@ -2,7 +2,7 @@ source_dir = "src/swift"
 file_extension = "swift"
 swift_subdir = true
 
-[condition.depth]
+[condition.depth.enabled]
 appconfig_depthfmt = ",\n\t\tcreateDepthBuffer: $depth_format"
 depth_info_ref = "&depthInfo"
 lesson_struct_depth = """
@@ -17,10 +17,10 @@ lesson_struct_depth = """
 		depthInfo.cycle            = true
 """
 
-[condition.-depth]
+[condition.depth.disabled]
 depth_info_ref = "nil"
 
-[condition.projection]
+[condition.projection.enabled]
 swift_import_simd = "import simd\n"
 lesson_definitions = """
 
@@ -35,7 +35,7 @@ lesson_func_resize = """
 	}
 """
 
-[condition.key]
+[condition.key.enabled]
 lesson_func_key = """
 
 
