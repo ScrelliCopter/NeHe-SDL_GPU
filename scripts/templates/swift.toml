@@ -6,6 +6,7 @@ swift_subdir = true
 appconfig_depthfmt = ",\n\t\tcreateDepthBuffer: $depth_format"
 depth_info_ref = "&depthInfo"
 lesson_struct_depth = """
+
 		var depthInfo = SDL_GPUDepthStencilTargetInfo()
 		depthInfo.texture          = ctx.depthTexture
 		depthInfo.clear_depth      = 1.0
@@ -24,9 +25,9 @@ swift_import_simd = "import simd\n"
 lesson_definitions = """
 
 	var projection: simd_float4x4 = .identity
-
 """
 lesson_func_resize = """
+
 	mutating func resize(size: Size<Int32>)
 	{
 		let aspect = Float(size.width) / Float(max(1, size.height))
@@ -38,7 +39,7 @@ lesson_func_resize = """
 lesson_func_key = """
 
 
-	mutating func key(ctx: inout NeHeContext, key: SDL_Keycode, down: Bool, repeat: Bool)
+	func key(ctx: inout NeHeContext, key: SDL_Keycode, down: Bool, repeat: Bool)
 	{
 		guard down && !`repeat` else { return }
 		switch key
