@@ -114,7 +114,7 @@ public extension AppRunner
 				&& ctx.depthTexture != nil
 				&& ctx.depthTextureSize != swapchainSize
 			{
-				try ctx.setupDepthTexture(size: swapchainSize)
+				try ctx.setupDepthTexture(size: swapchainSize, format: Self.config.manageDepthFormat)
 			}
 
 			try app.draw(ctx: &ctx, cmd: cmd, swapchain: swapchain, swapchainSize: swapchainSize)

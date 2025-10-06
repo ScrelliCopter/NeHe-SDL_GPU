@@ -58,8 +58,8 @@ internal extension NeHeContext
 
 public extension NeHeContext
 {
-	mutating func setupDepthTexture(size: Size<UInt32>,
-		format: SDL_GPUTextureFormat = SDL_GPU_TEXTUREFORMAT_D16_UNORM, clearDepth: Float = 1.0) throws(NeHeError)
+	mutating func setupDepthTexture(size: Size<UInt32>, format: SDL_GPUTextureFormat, clearDepth: Float = 1.0)
+		throws(NeHeError)
 	{
 		if self.depthTexture != nil
 		{
