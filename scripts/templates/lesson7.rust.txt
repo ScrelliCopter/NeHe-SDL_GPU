@@ -196,7 +196,7 @@ $appconfig_depthfmt
 		];
 		pso_info.target_info.color_target_descriptions = color_targets.as_ptr();
 		pso_info.target_info.num_color_targets         = color_targets.len() as u32;
-		pso_info.target_info.depth_stencil_format      = SDL_GPU_TEXTUREFORMAT_D16_UNORM;
+		pso_info.target_info.depth_stencil_format      = Self::CREATE_DEPTH_BUFFER;
 		pso_info.target_info.has_depth_stencil_target  = true;
 
 		pso_info.depth_stencil_state.compare_op         = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
