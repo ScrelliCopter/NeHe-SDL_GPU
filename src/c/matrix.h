@@ -1,6 +1,7 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
+typedef struct { float x, y, z; } Vec3f;
 typedef struct { float x, y, z, w; } Vec4f;
 typedef union { Vec4f c[4]; float a[16]; } Mtx;
 

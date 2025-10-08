@@ -9,7 +9,6 @@
 
 
 typedef struct { float x, y; } Vec2f;
-typedef struct { float x, y, z; } Vec3f;
 typedef struct { float r, g, b; } Color;
 
 typedef struct
@@ -119,6 +118,7 @@ static void ParticlesUpdate(void)
 		system.cycleDelay = 0;
 		system.colorIndex = (system.colorIndex + 1) % SDL_arraysize(particleColors);
 	}
+
 	++system.cycleDelay;
 }
 

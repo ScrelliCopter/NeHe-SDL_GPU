@@ -12,26 +12,23 @@ extern inline Mtx Mtx_InitScalar(float s);
 extern inline Mtx Mtx_Translation(float x, float y, float z);
 extern inline Mtx Mtx_Scaled(float x, float y, float z);
 
-static void MakeRotation(float m[9], float c, float s, float x, float y, float z)
+typedef struct { Vec3f c[3]; } LinMtx;
+
+static LinMtx MakeRotation(float c, float s, float x, float y, float z)
 {
 	const float rc = 1.f - c;
 	const float rcx = x * rc, rcy = y * rc, rcz = z * rc;
 	const float sx = x * s, sy = y * s, sz = z * s;
 
-	m[0] = rcx * x + c;
-	m[3] = rcx * y - sz;
-	m[6] = rcx * z + sy;
-
-	m[1] = rcy * x + sz;
-	m[4] = rcy * y + c;
-	m[7] = rcy * z - sx;
-
-	m[2] = rcz * x - sy;
-	m[5] = rcz * y + sx;
-	m[8] = rcz * z + c;
+	return (LinMtx)
+	{
+		.c[0] = { rcx * x +  c, rcy * x + sz, rcz * x - sy },
+		.c[1] = { rcx * y - sz, rcy * y +  c, rcz * y + sx },
+		.c[2] = { rcx * z + sy, rcy * z - sx, rcz * z +  c }
+	};
 }
 
-static void MakeGLRotation(float m[9], float angle, float x, float y, float z)
+static LinMtx MakeGLRotation(float angle, float x, float y, float z)
 {
 	// Treat inputs like glRotatef
 	const float theta = angle * (SDL_PI_F / 180.0f);
@@ -43,19 +40,18 @@ static void MakeGLRotation(float m[9], float angle, float x, float y, float z)
 		z /= axisMag;
 	}
 
-	MakeRotation(m, SDL_cosf(theta), SDL_sinf(theta), x, y, z);
+	return MakeRotation(SDL_cosf(theta), SDL_sinf(theta), x, y, z);
 }
 
 Mtx Mtx_Rotation(float angle, float x, float y, float z)
 {
-	float r[9];
-	MakeGLRotation(r, angle, x, y, z);
+	LinMtx r = MakeGLRotation(angle, x, y, z);
 	return (Mtx)
 	{
-		.c[0] = { r[0], r[1], r[2], 0.0f },
-		.c[1] = { r[3], r[4], r[5], 0.0f },
-		.c[2] = { r[6], r[7], r[8], 0.0f },
-		.c[3] = { 0.0f, 0.0f, 0.0f, 1.0f }
+		.c[0] = { r.c[0].x, r.c[0].y, r.c[0].z, 0.0f },
+		.c[1] = { r.c[1].x, r.c[1].y, r.c[1].z, 0.0f },
+		.c[2] = { r.c[2].x, r.c[2].y, r.c[2].z, 0.0f },
+		.c[3] = {     0.0f,     0.0f,     0.0f, 1.0f }
 	};
 }
 
@@ -168,21 +164,21 @@ void Mtx_Scale(Mtx* m, float x, float y, float z)
 void Mtx_Rotate(Mtx* m, float angle, float x, float y, float z)
 {
 	// Set up temporaries
-	float tmp[12], r[9];
-	SDL_memcpy(tmp, m->a, sizeof(float) * 12);
-	MakeGLRotation(r, angle, x, y, z);
+	Vec4f tCol[3];
+	SDL_memcpy(tCol, m->c, sizeof(Vec4f) * 3);
+	LinMtx r = MakeGLRotation(angle, x, y, z);
 
 	// Partial matrix multiplication
-	m->a[0]  = r[0] * tmp[0] + r[1] * tmp[4] + r[2] * tmp[8];
-	m->a[1]  = r[0] * tmp[1] + r[1] * tmp[5] + r[2] * tmp[9];
-	m->a[2]  = r[0] * tmp[2] + r[1] * tmp[6] + r[2] * tmp[10];
-	m->a[3]  = r[0] * tmp[3] + r[1] * tmp[7] + r[2] * tmp[11];
-	m->a[4]  = r[3] * tmp[0] + r[4] * tmp[4] + r[5] * tmp[8];
-	m->a[5]  = r[3] * tmp[1] + r[4] * tmp[5] + r[5] * tmp[9];
-	m->a[6]  = r[3] * tmp[2] + r[4] * tmp[6] + r[5] * tmp[10];
-	m->a[7]  = r[3] * tmp[3] + r[4] * tmp[7] + r[5] * tmp[11];
-	m->a[8]  = r[6] * tmp[0] + r[7] * tmp[4] + r[8] * tmp[8];
-	m->a[9]  = r[6] * tmp[1] + r[7] * tmp[5] + r[8] * tmp[9];
-	m->a[10] = r[6] * tmp[2] + r[7] * tmp[6] + r[8] * tmp[10];
-	m->a[11] = r[6] * tmp[3] + r[7] * tmp[7] + r[8] * tmp[11];
+	m->c[0].x = r.c[0].x * tCol[0].x + r.c[0].y * tCol[1].x + r.c[0].z * tCol[2].x;
+	m->c[0].y = r.c[0].x * tCol[0].y + r.c[0].y * tCol[1].y + r.c[0].z * tCol[2].y;
+	m->c[0].z = r.c[0].x * tCol[0].z + r.c[0].y * tCol[1].z + r.c[0].z * tCol[2].z;
+	m->c[0].w = r.c[0].x * tCol[0].w + r.c[0].y * tCol[1].w + r.c[0].z * tCol[2].w;
+	m->c[1].x = r.c[1].x * tCol[0].x + r.c[1].y * tCol[1].x + r.c[1].z * tCol[2].x;
+	m->c[1].y = r.c[1].x * tCol[0].y + r.c[1].y * tCol[1].y + r.c[1].z * tCol[2].y;
+	m->c[1].z = r.c[1].x * tCol[0].z + r.c[1].y * tCol[1].z + r.c[1].z * tCol[2].z;
+	m->c[1].w = r.c[1].x * tCol[0].w + r.c[1].y * tCol[1].w + r.c[1].z * tCol[2].w;
+	m->c[2].x = r.c[2].x * tCol[0].x + r.c[2].y * tCol[1].x + r.c[2].z * tCol[2].x;
+	m->c[2].y = r.c[2].x * tCol[0].y + r.c[2].y * tCol[1].y + r.c[2].z * tCol[2].y;
+	m->c[2].z = r.c[2].x * tCol[0].z + r.c[2].y * tCol[1].z + r.c[2].z * tCol[2].z;
+	m->c[2].w = r.c[2].x * tCol[0].w + r.c[2].y * tCol[1].w + r.c[2].z * tCol[2].w;
 }
