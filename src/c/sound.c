@@ -10,7 +10,7 @@
 struct NeHeSound
 {
 	SDL_AudioSpec spec;
-	Uint32 numFrames;
+	int bytes;
 	Uint8 frames[];
 };
 
@@ -34,12 +34,8 @@ NeHeSound* NeHe_LoadSound(struct NeHeContext* restrict ctx, const char* const re
 		return NULL;
 	}
 
-	// Calculate number of frames
-	const unsigned frameSize = SDL_AUDIO_FRAMESIZE(wavSpec);
-	const unsigned numFrames = wavSize / frameSize;
-
 	// Allocate structure for sound
-	const size_t audioSize = (size_t)frameSize * (size_t)numFrames;
+	const size_t audioSize = (size_t)wavSize;
 	const size_t soundSize = sizeof(NeHeSound) + audioSize;
 	NeHeSound* sound = (NeHeSound*)SDL_malloc(soundSize);
 	if (!sound)
@@ -51,7 +47,7 @@ NeHeSound* NeHe_LoadSound(struct NeHeContext* restrict ctx, const char* const re
 
 	// Copy header and data to sound structure
 	SDL_memcpy(&sound->spec, &wavSpec, sizeof(SDL_AudioSpec));
-	sound->numFrames = numFrames;
+	sound->bytes = (int)wavSize;
 	SDL_memcpy(sound->frames, wavAudio, audioSize);
 
 	SDL_free(wavAudio);
@@ -62,7 +58,7 @@ NeHeSound* NeHe_LoadSound(struct NeHeContext* restrict ctx, const char* const re
 typedef struct
 {
 	const NeHeSound* restrict sound;
-	Uint32 framesLeft;
+	int bytesLeft;
 } AudioLooperState;
 
 static void SDLCALL AudioLoopCallback(void* user, SDL_AudioStream* stream, int additional, int total)
@@ -75,24 +71,22 @@ static void SDLCALL AudioLoopCallback(void* user, SDL_AudioStream* stream, int a
 	if (!sound)
 		return;
 
-	const Uint32 frameSize = SDL_AUDIO_FRAMESIZE(sound->spec);
-	Uint32 requested = (Uint32)additional / frameSize;  // Number of requested frames
-	while (requested > 0)
+	while (additional > 0)
 	{
 		// Get sound frames position & number of frames to push
-		const Uint8* frames = sound->frames + (sound->numFrames - state->framesLeft) * frameSize;
-		const Uint32 numFrames = SDL_min(requested, state->framesLeft);
+		const Uint8* frames = sound->frames + (sound->bytes - state->bytesLeft);
+		const int framesLen = SDL_min(additional, state->bytesLeft);
 
 		// Push frames
-		if (!SDL_PutAudioStreamData(stream, frames, frameSize * numFrames))
+		if (!SDL_PutAudioStreamData(stream, frames, framesLen))
 			break;
 
 		// Subtract number of consumed frames
-		requested -= numFrames;
-		state->framesLeft -= numFrames;
+		additional -= framesLen;
+		state->bytesLeft -= framesLen;
 
-		if (state->framesLeft == 0)                // Reached end of sound
-			state->framesLeft = sound->numFrames;  // Restart from the beginning
+		if (state->bytesLeft == 0)            // Reached end of sound
+			state->bytesLeft = sound->bytes;  // Restart from the beginning
 	}
 }
 
@@ -161,14 +155,14 @@ bool NeHe_PlaySound(const NeHeSound* restrict sound, NeHeSoundFlags flags)
 	if (!(flags & NEHE_SND_LOOP))
 	{
 		// For one-shots then just shove the entire sound into the stream
-		SDL_PutAudioStreamData(audioStream, sound->frames, (int)(SDL_AUDIO_FRAMESIZE(sound->spec) * sound->numFrames));
+		SDL_PutAudioStreamData(audioStream, sound->frames, sound->bytes);
 		SDL_FlushAudioStream(audioStream);
 	}
 	else
 	{
 		// For looped sounds setup get callback to constantly replenish the stream
 		looperState.sound = sound;
-		looperState.framesLeft = sound->numFrames;
+		looperState.bytesLeft = sound->bytes;
 		if (!SDL_SetAudioStreamGetCallback(audioStream, AudioLoopCallback, &looperState))
 		{
 			SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_SetAudioStreamGetCallback: %s", SDL_GetError());
