@@ -94,19 +94,21 @@ static SDL_AudioDeviceID audioDevice = 0U;
 static SDL_AudioStream* audioStream = NULL;
 static AudioLooperState looperState;
 
-bool NeHe_PlaySound(const NeHeSound* restrict sound, NeHeSoundFlags flags)
+bool NeHe_OpenSound(void)
 {
+	SDL_assert(audioDevice == 0u);
+
 	// Init audio subsystem if needed
 	if (!SDL_WasInit(SDL_INIT_AUDIO))
 	{
 		if (!SDL_InitSubSystem(SDL_INIT_AUDIO))
 		{
 			SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_InitSubSystem: %s", SDL_GetError());
-			return SDL_APP_FAILURE;
+			return false;
 		}
 	}
 
-	// Open logical device if needed
+	// Open logical device
 	if (!audioDevice)
 	{
 		if ((audioDevice = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL)) == 0u)
@@ -116,16 +118,34 @@ bool NeHe_PlaySound(const NeHeSound* restrict sound, NeHeSoundFlags flags)
 		}
 	}
 
-	// Cut off previous stream
-	if (audioStream)
-	{
-		SDL_FlushAudioStream(audioStream);
-		SDL_DestroyAudioStream(audioStream);
-		audioStream = NULL;
-	}
+	return true;
+}
 
-	// If no sound was provided then we're done
-	if (!sound)
+static void StopSound(void)
+{
+	if (audioStream == NULL)
+		return;
+
+	SDL_FlushAudioStream(audioStream);
+	SDL_DestroyAudioStream(audioStream);
+	audioStream = NULL;
+}
+
+void NeHe_CloseSound(void)
+{
+	StopSound();                        // Stop & dispose of currently playing stream if any
+	SDL_CloseAudioDevice(audioDevice);  // Close the logical audio device
+	audioDevice = 0u;
+}
+
+bool NeHe_PlaySound(const NeHeSound* restrict sound, NeHeSoundFlags flags)
+{
+	// Open device if needed
+	if (audioDevice == 0u && !NeHe_OpenSound())
+		return false;
+
+	StopSound();        // Cut off previous stream
+	if (sound == NULL)  // If no sound was provided then we're done
 		return true;
 
 	// Get preferred device format

@@ -16,6 +16,7 @@ static bool Lesson21_Init(NeHeContext* restrict ctx)
 	sndDie       = NeHe_LoadSound(ctx, "Data/Die.wav");
 	sndFreeze    = NeHe_LoadSound(ctx, "Data/freeze.wav");
 	sndHourglass = NeHe_LoadSound(ctx, "Data/hourglass.wav");
+	NeHe_OpenSound();
 
 	return true;
 }
@@ -24,6 +25,7 @@ static void Lesson21_Quit(NeHeContext* restrict ctx)
 {
 	(void)ctx;
 
+	NeHe_CloseSound();
 	SDL_free(sndHourglass);
 	SDL_free(sndFreeze);
 	SDL_free(sndDie);

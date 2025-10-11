@@ -12,6 +12,8 @@ typedef unsigned NeHeSoundFlags;
 #define NEHE_SND_LOOP  (NeHeSoundFlags)(1 << 3)
 
 NeHeSound* NeHe_LoadSound(struct NeHeContext* restrict ctx, const char* restrict resource);
+bool NeHe_OpenSound(void);
+void NeHe_CloseSound(void);
 bool NeHe_PlaySound(const NeHeSound* restrict sound, NeHeSoundFlags flags);
 
 #endif//SOUND_H
