@@ -3,6 +3,12 @@
 
 #include <SDL3/SDL_stdinc.h>
 
+#define stbtt_uint8       Uint8
+#define stbtt_int8        Sint8
+#define stbtt_uint16      Uint16
+#define stbtt_int16       Sint16
+#define stbtt_uint32      Uint32
+#define stbtt_int32       Sint32
 #define STBTT_ifloor(X)   ((int)SDL_floor(X))
 #define STBTT_iceil(X)    ((int)SDL_ceil(X))
 #define STBTT_sqrt(X)     SDL_sqrt(X)
