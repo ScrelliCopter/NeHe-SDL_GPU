@@ -21,4 +21,5 @@ add_lesson(lesson17 SOURCES lesson17.c SHADERS lesson6 lesson17 DATA Font.bmp Bu
 add_lesson(lesson18 SOURCES lesson18.c quadric.h quadric.c SHADERS lesson6 lesson7 DATA Wall.bmp)
 add_lesson(lesson19 SOURCES lesson19.c SHADERS lesson19 DATA Particle.bmp)
 add_lesson(lesson20 SOURCES lesson20.c SHADERS lesson20 DATA Logo.bmp Image1.bmp Image2.bmp Mask1.bmp Mask2.bmp)
+add_lesson(lesson21 SOURCES lesson21.c sound.h sound.c SHADERS lesson6 lesson17 DATA Font.bmp Image.bmp Complete.wav Die.wav Hourglass.wav Freeze.wav)
 add_lesson(lesson29 SOURCES lesson29.c SHADERS lesson6 DATA Monitor.raw GL.raw)
